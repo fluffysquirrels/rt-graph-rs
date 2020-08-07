@@ -101,6 +101,13 @@ impl Store {
         Ok(())
     }
 
+    fn purge(&mut self, t0: u32, t1: u32) -> Result<()> {
+        for t in self.all.range(t0..t1).map(|(t,_v)| *t).collect::<Vec<u32>>() {
+            self.all.remove(&t);
+        }
+        Ok(())
+    }
+
     fn query(&self, t0: u32, t1: u32) -> Result<Vec<Point>> {
         let rv: Vec<Point> = self.all.range(t0..t1).map(|(t,v)| Point { t: *t, v: *v }).collect();
         Ok(rv)
@@ -202,6 +209,7 @@ fn main() {
         let t0 = s.last_t();
         s.ingest(&g.gen_data()).unwrap();
         let t1 = s.last_t();
+        s.purge(0, t1 - (WIN_W as f32 * ZOOM_X) as u32).unwrap();
 
         let patch_dims = (((t1 - t0) as f32 / ZOOM_X) as usize, WIN_H as usize);
         let mut patch_bytes = vec![0u8; patch_dims.0 * patch_dims.1 * 3];
