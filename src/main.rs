@@ -144,12 +144,12 @@ impl TestDataGenerator {
     }
 }
 
-fn do_it(store: &Store,
+fn render_patch(store: &Store,
          pb: &mut [u8], pbw: usize, pbh: usize,
          t0: u32, t1: u32, v0: u16, v1: u16
 ) -> Result<()> {
 
-    trace!("do_it: pbw={}", pbw);
+    trace!("render_patch: pbw={}", pbw);
     let points = store.query(t0, t1)?;
     for p in points {
         assert!(p.t >= t0 && p.t <= t1);
@@ -212,8 +212,8 @@ fn main() {
 
         let patch_dims = (((t1 - t0) as f32 / ZOOM_X) as usize, WIN_H as usize);
         let mut patch_bytes = vec![0u8; patch_dims.0 * patch_dims.1 * 3];
-        do_it(&s, &mut patch_bytes, patch_dims.0, patch_dims.1,
-              t0, t1, 0, std::u16::MAX).unwrap();
+        render_patch(&s, &mut patch_bytes, patch_dims.0, patch_dims.1,
+                     t0, t1, 0, std::u16::MAX).unwrap();
         let patch = glium::texture::RawImage2d::from_raw_rgb(patch_bytes, (patch_dims.0 as u32, patch_dims.1 as u32));
         let patch_texture = glium::Texture2d::new(&display, patch).unwrap();
 
