@@ -47,7 +47,8 @@ fn start_loop<F>(event_loop: EventLoop<()>, mut callback: F)->! where F: 'static
 
         let action = if run_callback {
             let action = callback(&events_buffer);
-            next_frame_time = Instant::now() + Duration::from_nanos(16666667);
+            // next_frame_time = Instant::now() + Duration::from_nanos(16666667);
+            next_frame_time = next_frame_time + Duration::from_nanos(16666667);
             // TODO: Add back the old accumulator loop in some way
 
             events_buffer.clear();
