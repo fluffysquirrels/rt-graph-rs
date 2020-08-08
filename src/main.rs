@@ -68,8 +68,6 @@ fn start_loop<F>(event_loop: EventLoop<()>, mut callback: F)->! where F: 'static
 #[derive(Debug, Clone)]
 struct Point {
     t: u32,
-
-    #[allow(dead_code)] // WIP
     v: u16,
 }
 
