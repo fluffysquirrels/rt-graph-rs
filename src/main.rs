@@ -69,18 +69,26 @@ fn start_loop<F>(event_loop: EventLoop<()>, mut callback: F)->! where F: 'static
 #[derive(Debug, Clone)]
 struct Point {
     t: u32,
-    v: u16,
+    vs: Vec<u16>,
+}
+
+impl Point {
+    fn vals(&self) -> &[u16] {
+        &self.vs
+    }
 }
 
 struct Store {
     last_t: u32,
-    all: BTreeMap<u32, u16>,
+    val_len: u8,
+    all: BTreeMap<u32, Vec<u16>>,
 }
 
 impl Store {
-    fn new() -> Store {
+    fn new(val_len: u8) -> Store {
         Store {
             last_t: 0,
+            val_len,
             all: BTreeMap::new(),
         }
     }
@@ -92,7 +100,8 @@ impl Store {
             }
             self.last_t = p.t;
 
-            self.all.insert(p.t, p.v);
+            assert!(p.vs.len() == self.val_len as usize);
+            self.all.insert(p.t, p.vs.clone());
         }
 
         trace!("ingest all.len={} last_t={}", self.all.len(), self.last_t);
@@ -101,19 +110,27 @@ impl Store {
     }
 
     fn discard(&mut self, t0: u32, t1: u32) -> Result<()> {
-        for t in self.all.range(t0..t1).map(|(t,_v)| *t).collect::<Vec<u32>>() {
+        for t in self.all.range(t0..t1).map(|(t,_vs)| *t).collect::<Vec<u32>>() {
             self.all.remove(&t);
         }
         Ok(())
     }
 
     fn query(&self, t0: u32, t1: u32) -> Result<Vec<Point>> {
-        let rv: Vec<Point> = self.all.range(t0..t1).map(|(t,v)| Point { t: *t, v: *v }).collect();
+        let rv: Vec<Point> =
+            self.all.range(t0..t1)
+                .map(|(t,vs)| Point { t: *t, vs: vs.clone() })
+                .collect();
+        trace!("query rv.len={}", rv.len());
         Ok(rv)
     }
 
     fn last_t(&self) -> u32 {
         self.last_t
+    }
+
+    fn val_len(&self) -> u8 {
+        self.val_len
     }
 }
 
@@ -134,15 +151,27 @@ impl TestDataGenerator {
     fn gen_data(&mut self) -> Vec<Point> {
         let mut rv: Vec<Point> = Vec::with_capacity(GEN_POINTS as usize);
         for _i in 0..GEN_POINTS {
+            let t = self.curr_t;
             rv.push(Point {
-                t: self.curr_t,
-                v: ((((self.curr_t as f32 / 10000.0).sin() + 1.0) / 2.0) * std::u16::MAX as f32) as u16,
+                t,
+                vs: vec![trig_sample(1.0/10000.0, 0.0, t),
+                         trig_sample(1.0/10000.0, std::f32::consts::PI / 3.0, t),
+                         trig_sample(1.0/5000.0,  0.0, t)],
             });
             self.curr_t += GEN_T_INTERVAL;
         }
         rv
     }
 }
+
+fn trig_sample(scale: f32, offset: f32, t: u32) -> u16 {
+    ((((offset + t as f32 * scale).sin() + 1.0) / 2.0) * std::u16::MAX as f32) as u16
+}
+
+const COLS: [(u8, u8, u8); 3]
+    = [(255u8, 0u8,   0u8),
+       (0u8,   255u8, 0u8),
+       (0u8,   0u8,   255u8)];
 
 fn render_patch(store: &Store,
          pb: &mut [u8], pbw: usize, pbh: usize,
@@ -155,21 +184,24 @@ fn render_patch(store: &Store,
         assert!(p.t >= t0 && p.t <= t1);
 
         let x = (((p.t-t0) as f32 / (t1-t0) as f32) * pbw as f32) as usize;
-        let y = (((p.v-v0) as f32 / (v1-v0) as f32) * pbh as f32) as usize;
-
         if !(x < pbw) {
             // Should be guaranteed by store.query.
             panic!("x < pbw: x={} pbw={}", x, pbw);
         }
-        if y >= pbh {
-            // Skip points that are outside our render patch.
-            continue;
-        }
 
-        let i = 3*(pbw * y + x);
-        pb[i] = 0u8;
-        pb[i+1] = 255u8;
-        pb[i+2] = 0u8;
+        for ch in 0..store.val_len() {
+            let col = COLS[ch as usize];
+            let y = (((p.vals()[ch as usize]-v0) as f32 / (v1-v0) as f32) * pbh as f32) as usize;
+            if y >= pbh {
+                // Skip points that are outside our render patch.
+                continue;
+            }
+
+            let i = 3*(pbw * y + x);
+            pb[i] = col.0;
+            pb[i+1] = col.1;
+            pb[i+2] = col.2;
+        }
     }
 
     Ok(())
@@ -179,7 +211,7 @@ const WIN_W: u16 = 800;
 const WIN_H: u16 = 200;
 
 // t per x pixel
-const ZOOM_X: f32 = 500.0;
+const ZOOM_X: f32 = 1000.0;
 
 fn main() {
     env_logger::init();
@@ -198,7 +230,7 @@ fn main() {
     dest_texture.as_surface().clear_color(0.0, 0.0, 0.0, 1.0);
 
     let mut g = TestDataGenerator::new();
-    let mut s = Store::new();
+    let mut s = Store::new(3);
 
     let mut fps_timer = Instant::now();
     let mut fps_count = 0;
