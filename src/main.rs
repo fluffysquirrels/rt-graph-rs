@@ -216,77 +216,86 @@ const ZOOM_X: f32 = 1000.0;
 fn main() {
     env_logger::init();
 
-    // Building the display, ie. the main object
-    let event_loop = glutin::event_loop::EventLoop::new();
-    let wb = glutin::window::WindowBuilder::new()
-        .with_inner_size(PhysicalSize::new(WIN_W, WIN_H));
-    let cb = glutin::ContextBuilder::new().with_vsync(true);
-    let display = glium::Display::new(wb, cb, &event_loop).unwrap();
+    let mut w = GraphWindow {};
+    w.main().unwrap();
+}
 
-    let dest_texture = glium::Texture2d::empty_with_format(&display,
-                                               glium::texture::UncompressedFloatFormat::U8U8U8U8,
-                                               glium::texture::MipmapsOption::NoMipmap,
-                                               WIN_W as u32, WIN_H as u32).unwrap();
-    dest_texture.as_surface().clear_color(0.0, 0.0, 0.0, 1.0);
+struct GraphWindow {}
 
-    let mut g = TestDataGenerator::new();
-    let mut s = Store::new(3);
+impl GraphWindow {
+    fn main(&mut self) -> Result<()> {
+        // Building the display, ie. the main object
+        let event_loop = glutin::event_loop::EventLoop::new();
+        let wb = glutin::window::WindowBuilder::new()
+            .with_inner_size(PhysicalSize::new(WIN_W, WIN_H));
+        let cb = glutin::ContextBuilder::new().with_vsync(true);
+        let display = glium::Display::new(wb, cb, &event_loop).unwrap();
 
-    let mut fps_timer = Instant::now();
-    let mut fps_count = 0;
+        let dest_texture = glium::Texture2d::empty_with_format(&display,
+                                                               glium::texture::UncompressedFloatFormat::U8U8U8U8,
+                                                               glium::texture::MipmapsOption::NoMipmap,
+                                                               WIN_W as u32, WIN_H as u32).unwrap();
+        dest_texture.as_surface().clear_color(0.0, 0.0, 0.0, 1.0);
 
-    // the main loop
-    start_loop(event_loop, move |events| {
-        let t0 = s.last_t();
-        s.ingest(&g.gen_data()).unwrap();
-        let t1 = s.last_t();
-        s.discard(0, t1 - (WIN_W as f32 * ZOOM_X) as u32).unwrap();
+        let mut g = TestDataGenerator::new();
+        let mut s = Store::new(3);
 
-        let patch_dims = (((t1 - t0) as f32 / ZOOM_X) as usize, WIN_H as usize);
-        let mut patch_bytes = vec![0u8; patch_dims.0 * patch_dims.1 * 3];
-        render_patch(&s, &mut patch_bytes, patch_dims.0, patch_dims.1,
-                     t0, t1, 0, std::u16::MAX).unwrap();
-        let patch = glium::texture::RawImage2d::from_raw_rgb(patch_bytes, (patch_dims.0 as u32, patch_dims.1 as u32));
-        let patch_texture = glium::Texture2d::new(&display, patch).unwrap();
+        let mut fps_timer = Instant::now();
+        let mut fps_count = 0;
 
-        let dest_rect = glium::BlitTarget {
-            left: ((t0 as f32 / ZOOM_X) as u32) % WIN_W as u32,
-            bottom: 0u32,
-            width: patch_dims.0 as i32,
-            height: patch_dims.1 as i32,
-        };
+        // the main loop
+        start_loop(event_loop, move |events| {
+            let t0 = s.last_t();
+            s.ingest(&g.gen_data()).unwrap();
+            let t1 = s.last_t();
+            s.discard(0, t1 - (WIN_W as f32 * ZOOM_X) as u32).unwrap();
 
-        trace!("dest_rect: {:?}", dest_rect);
+            let patch_dims = (((t1 - t0) as f32 / ZOOM_X) as usize, WIN_H as usize);
+            let mut patch_bytes = vec![0u8; patch_dims.0 * patch_dims.1 * 3];
+            render_patch(&s, &mut patch_bytes, patch_dims.0, patch_dims.1,
+                         t0, t1, 0, std::u16::MAX).unwrap();
+            let patch = glium::texture::RawImage2d::from_raw_rgb(patch_bytes, (patch_dims.0 as u32, patch_dims.1 as u32));
+            let patch_texture = glium::Texture2d::new(&display, patch).unwrap();
 
-        patch_texture.as_surface().blit_whole_color_to(
-            &dest_texture.as_surface(), &dest_rect,
-            glium::uniforms::MagnifySamplerFilter::Linear);
+            let dest_rect = glium::BlitTarget {
+                left: ((t0 as f32 / ZOOM_X) as u32) % WIN_W as u32,
+                bottom: 0u32,
+                width: patch_dims.0 as i32,
+                height: patch_dims.1 as i32,
+            };
 
-        // drawing a frame
-        let target = display.draw();
-        dest_texture.as_surface().fill(&target, glium::uniforms::MagnifySamplerFilter::Linear);
-        target.finish().unwrap();
+            trace!("dest_rect: {:?}", dest_rect);
 
-        fps_count += 1;
-        if fps_timer.elapsed().as_secs() >= 1 {
-            debug!("fps: {}", fps_count);
-            fps_timer = Instant::now();
-            fps_count = 0;
-        }
+            patch_texture.as_surface().blit_whole_color_to(
+                &dest_texture.as_surface(), &dest_rect,
+                glium::uniforms::MagnifySamplerFilter::Linear);
 
-        let mut action = Action::Continue;
+            // drawing a frame
+            let target = display.draw();
+            dest_texture.as_surface().fill(&target, glium::uniforms::MagnifySamplerFilter::Linear);
+            target.finish().unwrap();
+
+            fps_count += 1;
+            if fps_timer.elapsed().as_secs() >= 1 {
+                debug!("fps: {}", fps_count);
+                fps_timer = Instant::now();
+                fps_count = 0;
+            }
+
+            let mut action = Action::Continue;
 
             // handling the events received by the window since the last frame
-        for event in events {
-            match event {
-                glutin::event::Event::WindowEvent { event, .. } => match event {
-                    glutin::event::WindowEvent::CloseRequested => action = Action::Stop,
+            for event in events {
+                match event {
+                    glutin::event::Event::WindowEvent { event, .. } => match event {
+                        glutin::event::WindowEvent::CloseRequested => action = Action::Stop,
+                        _ => (),
+                    },
                     _ => (),
-                },
-                _ => (),
+                }
             }
-        }
 
-        action
-    });
+            action
+        });
+    }
 }
