@@ -1,6 +1,9 @@
 #![deny(warnings)]
 
 #[macro_use]
+extern crate derive_builder;
+
+#[macro_use]
 extern crate log;
 
 use glium::{glutin, Surface};
@@ -210,20 +213,31 @@ fn render_patch(store: &Store,
 const WIN_W: u16 = 800;
 const WIN_H: u16 = 200;
 
-// t per x pixel
-const ZOOM_X: f32 = 1000.0;
+use once_cell::sync::OnceCell;
+
+static TGW: OnceCell<GraphWindow> = OnceCell::new();
 
 fn main() {
     env_logger::init();
 
-    let mut w = GraphWindow {};
+    let w = GraphWindowBuilder::default().build().unwrap();
     w.main().unwrap();
 }
 
-struct GraphWindow {}
+#[derive(Builder, Debug)]
+struct GraphWindow {
+    /// t per x pixel
+    #[builder(default = "1000.0")]
+    zoom_x: f32,
+}
 
 impl GraphWindow {
-    fn main(&mut self) -> Result<()> {
+    fn main(self) -> Result<()> {
+        TGW.set(self).expect("Not to have already set TGW, i.e. run main()");
+        GraphWindow::main2(TGW.get().unwrap())
+    }
+
+    fn main2(w: &'static GraphWindow) -> Result<()> {
         // Building the display, ie. the main object
         let event_loop = glutin::event_loop::EventLoop::new();
         let wb = glutin::window::WindowBuilder::new()
@@ -248,9 +262,9 @@ impl GraphWindow {
             let t0 = s.last_t();
             s.ingest(&g.gen_data()).unwrap();
             let t1 = s.last_t();
-            s.discard(0, t1 - (WIN_W as f32 * ZOOM_X) as u32).unwrap();
+            s.discard(0, t1 - (WIN_W as f32 * w.zoom_x) as u32).unwrap();
 
-            let patch_dims = (((t1 - t0) as f32 / ZOOM_X) as usize, WIN_H as usize);
+            let patch_dims = (((t1 - t0) as f32 / w.zoom_x) as usize, WIN_H as usize);
             let mut patch_bytes = vec![0u8; patch_dims.0 * patch_dims.1 * 3];
             render_patch(&s, &mut patch_bytes, patch_dims.0, patch_dims.1,
                          t0, t1, 0, std::u16::MAX).unwrap();
@@ -258,7 +272,7 @@ impl GraphWindow {
             let patch_texture = glium::Texture2d::new(&display, patch).unwrap();
 
             let dest_rect = glium::BlitTarget {
-                left: ((t0 as f32 / ZOOM_X) as u32) % WIN_W as u32,
+                left: ((t0 as f32 / w.zoom_x) as u32) % WIN_W as u32,
                 bottom: 0u32,
                 width: patch_dims.0 as i32,
                 height: patch_dims.1 as i32,
