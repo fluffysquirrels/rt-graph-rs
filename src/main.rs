@@ -12,6 +12,9 @@ use graph_window::{GraphWindow, GraphWindowBuilder};
 mod store;
 pub use store::Store;
 
+mod test_data_generator;
+pub use test_data_generator::TestDataGenerator;
+
 #[derive(Debug)]
 pub enum Error {
     String(String),
