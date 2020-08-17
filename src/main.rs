@@ -9,12 +9,27 @@ extern crate log;
 mod graph_window;
 use graph_window::{GraphWindow, GraphWindowBuilder};
 
+mod store;
+pub use store::Store;
+
 #[derive(Debug)]
 pub enum Error {
     String(String),
 }
 
 pub type Result<T> = std::result::Result<T, Error>;
+
+#[derive(Debug, Clone)]
+pub struct Point {
+    t: u32,
+    vs: Vec<u16>,
+}
+
+impl Point {
+    pub fn vals(&self) -> &[u16] {
+        &self.vs
+    }
+}
 
 fn main() {
     env_logger::init();

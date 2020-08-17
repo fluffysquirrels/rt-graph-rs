@@ -3,9 +3,8 @@ use std::time::{Duration, Instant};
 use glium::glutin::event_loop::{EventLoop, ControlFlow};
 use glium::glutin::event::{Event, StartCause};
 use glium::glutin::dpi::PhysicalSize;
-use std::collections::BTreeMap;
 
-use crate::{Error, Result};
+use crate::{Point, Result, Store};
 
 enum Action {
     Stop,
@@ -54,74 +53,6 @@ fn start_loop<F>(event_loop: EventLoop<()>, mut callback: F)->! where F: 'static
             Action::Stop => *control_flow = ControlFlow::Exit
         }
     })
-}
-
-#[derive(Debug, Clone)]
-struct Point {
-    t: u32,
-    vs: Vec<u16>,
-}
-
-impl Point {
-    fn vals(&self) -> &[u16] {
-        &self.vs
-    }
-}
-
-struct Store {
-    last_t: u32,
-    val_len: u8,
-    all: BTreeMap<u32, Vec<u16>>,
-}
-
-impl Store {
-    fn new(val_len: u8) -> Store {
-        Store {
-            last_t: 0,
-            val_len,
-            all: BTreeMap::new(),
-        }
-    }
-
-    fn ingest(&mut self, ps: &[Point]) -> Result<()> {
-        for p in ps {
-            if p.t <= self.last_t {
-                return Err(Error::String("t <= last_t".to_owned()));
-            }
-            self.last_t = p.t;
-
-            assert!(p.vs.len() == self.val_len as usize);
-            self.all.insert(p.t, p.vs.clone());
-        }
-
-        trace!("ingest all.len={} last_t={}", self.all.len(), self.last_t);
-
-        Ok(())
-    }
-
-    fn discard(&mut self, t0: u32, t1: u32) -> Result<()> {
-        for t in self.all.range(t0..t1).map(|(t,_vs)| *t).collect::<Vec<u32>>() {
-            self.all.remove(&t);
-        }
-        Ok(())
-    }
-
-    fn query(&self, t0: u32, t1: u32) -> Result<Vec<Point>> {
-        let rv: Vec<Point> =
-            self.all.range(t0..t1)
-                .map(|(t,vs)| Point { t: *t, vs: vs.clone() })
-                .collect();
-        trace!("query rv.len={}", rv.len());
-        Ok(rv)
-    }
-
-    fn last_t(&self) -> u32 {
-        self.last_t
-    }
-
-    fn val_len(&self) -> u8 {
-        self.val_len
-    }
 }
 
 const GEN_POINTS: u32 = 200;
