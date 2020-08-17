@@ -64,8 +64,14 @@ pub struct GraphWindow {
     #[builder(default = "200")]
     window_height: u16,
 
-    #[builder()]
+    #[builder(setter(name = "data_source_internal"))]
     data_source: Mutex<Box<dyn DataSource>>,
+}
+
+impl GraphWindowBuilder {
+    pub fn data_source<T: DataSource + 'static>(self, ds: T) -> Self {
+        self.data_source_internal(Mutex::new(Box::new(ds)))
+    }
 }
 
 impl GraphWindow {
