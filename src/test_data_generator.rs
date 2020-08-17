@@ -1,8 +1,9 @@
-use crate::Point;
+use crate::{DataSource, Point, Result};
 
 const GEN_POINTS: u32 = 200;
 const GEN_T_INTERVAL: u32 = 20;
 
+#[derive(Debug)]
 pub struct TestDataGenerator {
     curr_t: u32,
 }
@@ -13,8 +14,10 @@ impl TestDataGenerator {
             curr_t: 1
         }
     }
+}
 
-    pub fn gen_data(&mut self) -> Vec<Point> {
+impl DataSource for TestDataGenerator {
+    fn get_data(&mut self) -> Result<Vec<Point>> {
         let mut rv: Vec<Point> = Vec::with_capacity(GEN_POINTS as usize);
         for _i in 0..GEN_POINTS {
             let t = self.curr_t;
@@ -26,7 +29,7 @@ impl TestDataGenerator {
             });
             self.curr_t += GEN_T_INTERVAL;
         }
-        rv
+        Ok(rv)
     }
 }
 

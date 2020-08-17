@@ -4,7 +4,7 @@ use glium::glutin::event_loop::{EventLoop, ControlFlow};
 use glium::glutin::event::{Event, StartCause};
 use glium::glutin::dpi::PhysicalSize;
 
-use crate::{Result, Store, TestDataGenerator};
+use crate::{DataSource, Result, Store};
 
 enum Action {
     Stop,
@@ -99,22 +99,29 @@ const WIN_H: u16 = 200;
 
 use once_cell::sync::OnceCell;
 
-static TGW: OnceCell<GraphWindow> = OnceCell::new();
+static mut TGW: OnceCell<GraphWindow> = OnceCell::new();
+
+use std::sync::Mutex;
 
 #[derive(Builder, Debug)]
+#[builder(pattern = "owned")]
 pub struct GraphWindow {
     /// t per x pixel
     #[builder(default = "1000.0")]
     zoom_x: f32,
+
+    #[builder()]
+    data_source: Mutex<Box<dyn DataSource>>,
 }
 
 impl GraphWindow {
     pub fn main(self) -> Result<()> {
-        TGW.set(self).expect("Not to have already set TGW, i.e. run main()");
-        GraphWindow::main2(TGW.get().unwrap())
+        unsafe { TGW.set(self) }.expect(
+            "Not to have already set TGW, i.e. main() should only be called once");
+        GraphWindow::main2(unsafe { TGW.get_mut() }.unwrap())
     }
 
-    fn main2(w: &'static GraphWindow) -> Result<()> {
+    fn main2(w: &'static mut GraphWindow) -> Result<()> {
         // Building the display, ie. the main object
         let event_loop = glutin::event_loop::EventLoop::new();
         let wb = glutin::window::WindowBuilder::new()
@@ -128,7 +135,6 @@ impl GraphWindow {
                                                                WIN_W as u32, WIN_H as u32).unwrap();
         dest_texture.as_surface().clear_color(0.0, 0.0, 0.0, 1.0);
 
-        let mut g = TestDataGenerator::new();
         let mut s = Store::new(3);
 
         let mut fps_timer = Instant::now();
@@ -137,7 +143,7 @@ impl GraphWindow {
         // the main loop
         start_loop(event_loop, move |events| {
             let t0 = s.last_t();
-            s.ingest(&g.gen_data()).unwrap();
+            s.ingest(&(w.data_source.get_mut().unwrap().get_data().unwrap())).unwrap();
             let t1 = s.last_t();
             s.discard(0, t1 - (WIN_W as f32 * w.zoom_x) as u32).unwrap();
 

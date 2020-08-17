@@ -6,11 +6,13 @@ extern crate derive_builder;
 #[macro_use]
 extern crate log;
 
+use std::fmt::Debug;
+
 mod graph_window;
-use graph_window::{GraphWindow, GraphWindowBuilder};
+pub use graph_window::{GraphWindow, GraphWindowBuilder};
 
 mod store;
-pub use store::Store;
+use store::Store;
 
 mod test_data_generator;
 pub use test_data_generator::TestDataGenerator;
@@ -34,9 +36,6 @@ impl Point {
     }
 }
 
-fn main() {
-    env_logger::init();
-
-    let w: GraphWindow = GraphWindowBuilder::default().build().unwrap();
-    w.main().unwrap();
+pub trait DataSource: Debug + Send + Sync {
+    fn get_data(&mut self) -> Result<Vec<Point>>;
 }
