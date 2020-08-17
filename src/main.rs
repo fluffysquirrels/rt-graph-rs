@@ -201,7 +201,7 @@ fn render_patch(store: &Store,
             }
 
             let i = 3*(pbw * y + x);
-            pb[i] = col.0;
+            pb[i]   = col.0;
             pb[i+1] = col.1;
             pb[i+2] = col.2;
         }
