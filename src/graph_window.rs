@@ -100,6 +100,8 @@ impl GraphWindow {
         let mut fps_timer = Instant::now();
         let mut fps_count = 0;
 
+        let mut last_t_drawn = 0;
+
         // the main loop
         start_loop(event_loop, move |events| {
             let t0 = s.last_t();
@@ -110,10 +112,13 @@ impl GraphWindow {
                 s.discard(0, t1 - (w.window_width as f32 * w.zoom_x) as u32).unwrap();
             }
 
-            let patch_dims = (((t1 - t0) as f32 / w.zoom_x) as usize, w.window_height as usize);
+            let patch_dims = (((t1 - last_t_drawn) as f32 / w.zoom_x) as usize, w.window_height as usize);
             let mut patch_bytes = vec![0u8; patch_dims.0 * patch_dims.1 * 3];
-            render_patch(&s, &mut patch_bytes, patch_dims.0, patch_dims.1,
-                         t0, t1, 0, std::u16::MAX).unwrap();
+            if patch_dims.1 >= 1 {
+                render_patch(&s, &mut patch_bytes, patch_dims.0, patch_dims.1,
+                             last_t_drawn, t1, 0, std::u16::MAX).unwrap();
+                last_t_drawn = t1;
+            }
             let patch = glium::texture::RawImage2d::from_raw_rgb(patch_bytes, (patch_dims.0 as u32, patch_dims.1 as u32));
             let patch_texture = glium::Texture2d::new(&display, patch).unwrap();
 
