@@ -17,6 +17,7 @@ fn render_patch(store: &Store,
 ) -> Result<()> {
 
     trace!("render_patch: pbw={}", pbw);
+    assert!(pbw >= 1);
     let points = store.query(t0, t1)?;
     for p in points {
         assert!(p.t >= t0 && p.t <= t1);
@@ -114,7 +115,7 @@ impl GraphWindow {
 
             let patch_dims = (((t1 - last_t_drawn) as f32 / w.zoom_x) as usize, w.window_height as usize);
             let mut patch_bytes = vec![0u8; patch_dims.0 * patch_dims.1 * 3];
-            if patch_dims.1 >= 1 {
+            if patch_dims.0 >= 1 {
                 render_patch(&s, &mut patch_bytes, patch_dims.0, patch_dims.1,
                              last_t_drawn, t1, 0, std::u16::MAX).unwrap();
                 last_t_drawn = t1;
