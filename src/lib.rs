@@ -38,4 +38,5 @@ impl Point {
 
 pub trait DataSource: Debug + Send {
     fn get_data(&mut self) -> Result<Vec<Point>>;
+    fn get_num_values(&self) -> Result<usize>;
 }

@@ -31,6 +31,10 @@ impl DataSource for TestDataGenerator {
         }
         Ok(rv)
     }
+
+    fn get_num_values(&self) -> Result<usize> {
+        Ok(3)
+    }
 }
 
 fn trig_sample(scale: f32, offset: f32, t: u32) -> u16 {

@@ -96,7 +96,7 @@ impl GraphWindow {
                                                                w.window_width as u32, w.window_height as u32).unwrap();
         dest_texture.as_surface().clear_color(0.0, 0.0, 0.0, 1.0);
 
-        let mut s = Store::new(3);
+        let mut s = Store::new(w.data_source.lock().unwrap().get_num_values().unwrap() as u8);
 
         let mut fps_timer = Instant::now();
         let mut fps_count = 0;
