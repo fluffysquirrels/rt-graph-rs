@@ -102,40 +102,46 @@ impl GraphWindow {
         let mut fps_count = 0;
 
         let mut last_t_drawn = 0;
+        let mut last_x_drawn = 0;
 
         // the main loop
         start_loop(event_loop, move |events| {
-            let t0 = s.last_t();
-            s.ingest(&(w.data_source.get_mut().unwrap().get_data().unwrap())).unwrap();
-            let t1 = s.last_t();
+            let new_data = w.data_source.get_mut().unwrap()
+                                        .get_data().unwrap();
+            s.ingest(&(new_data)).unwrap();
+            let t_latest = s.last_t();
 
-            if t1 >= (w.window_width as f32 * w.zoom_x) as u32 {
-                s.discard(0, t1 - (w.window_width as f32 * w.zoom_x) as u32).unwrap();
+            // Discard old data if there is any
+            if t_latest >= (w.window_width as f32 * w.zoom_x) as u32 {
+                s.discard(0, t_latest - (w.window_width as f32 * w.zoom_x) as u32).unwrap();
             }
 
-            let patch_dims = (((t1 - last_t_drawn) as f32 / w.zoom_x) as usize, w.window_height as usize);
+            let patch_dims = (((t_latest - last_t_drawn) as f32 / w.zoom_x).floor() as usize,
+                              w.window_height as usize);
             let mut patch_bytes = vec![0u8; patch_dims.0 * patch_dims.1 * 3];
             if patch_dims.0 >= 1 {
+                let new_t = last_t_drawn + (patch_dims.0 as f32 * w.zoom_x) as u32;
                 render_patch(&s, &mut patch_bytes, patch_dims.0, patch_dims.1,
-                             last_t_drawn, t1, 0, std::u16::MAX).unwrap();
-                last_t_drawn = t1;
+                             last_t_drawn, new_t, 0, std::u16::MAX).unwrap();
+                let patch = glium::texture::RawImage2d::from_raw_rgb(patch_bytes,
+                                                                     (patch_dims.0 as u32, patch_dims.1 as u32));
+                let patch_texture = glium::Texture2d::new(&display, patch).unwrap();
+
+                let dest_rect = glium::BlitTarget {
+                    left: last_x_drawn,
+                    bottom: 0u32,
+                    width: patch_dims.0 as i32,
+                    height: patch_dims.1 as i32,
+                };
+
+                trace!("dest_rect: {:?}", dest_rect);
+
+                patch_texture.as_surface().blit_whole_color_to(
+                    &dest_texture.as_surface(), &dest_rect,
+                    glium::uniforms::MagnifySamplerFilter::Linear);
+                last_t_drawn = new_t;
+                last_x_drawn = (last_x_drawn + patch_dims.0 as u32) % w.window_width as u32;
             }
-            let patch = glium::texture::RawImage2d::from_raw_rgb(patch_bytes, (patch_dims.0 as u32, patch_dims.1 as u32));
-            let patch_texture = glium::Texture2d::new(&display, patch).unwrap();
-
-            let dest_rect = glium::BlitTarget {
-                left: ((t0 as f32 / w.zoom_x) as u32) % w.window_width as u32,
-                bottom: 0u32,
-                width: patch_dims.0 as i32,
-                height: patch_dims.1 as i32,
-            };
-
-            trace!("dest_rect: {:?}", dest_rect);
-
-            patch_texture.as_surface().blit_whole_color_to(
-                &dest_texture.as_surface(), &dest_rect,
-                glium::uniforms::MagnifySamplerFilter::Linear);
-
             // drawing a frame
             let target = display.draw();
             dest_texture.as_surface().fill(&target, glium::uniforms::MagnifySamplerFilter::Linear);
