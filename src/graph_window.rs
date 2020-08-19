@@ -28,7 +28,7 @@ fn render_patch(store: &Store,
         }
 
         for ch in 0..store.val_len() {
-            let col = COLS[ch as usize];
+            let col = COLS[ch as usize % COLS.len()];
             let y = (((p.vals()[ch as usize]-v0) as f32 / (v1-v0) as f32) * pbh as f32) as usize;
             if y >= pbh {
                 // Skip points that are outside our render patch.
