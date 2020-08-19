@@ -26,8 +26,8 @@ pub type Result<T> = std::result::Result<T, Error>;
 
 #[derive(Debug, Clone)]
 pub struct Point {
-    t: u32,
-    vs: Vec<u16>,
+    pub t: u32,
+    pub vs: Vec<u16>,
 }
 
 impl Point {
