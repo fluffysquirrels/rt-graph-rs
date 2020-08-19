@@ -44,7 +44,7 @@ impl Store {
             self.all.range(t0..t1)
                 .map(|(t,vs)| Point { t: *t, vs: vs.clone() })
                 .collect();
-        trace!("query rv.len={}", rv.len());
+        trace!("query t0={} t1={} rv.len={}", t0, t1, rv.len());
         Ok(rv)
     }
 

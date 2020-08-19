@@ -64,7 +64,7 @@ pub struct GraphWindow {
     #[builder(default = "200")]
     window_height: u16,
 
-    #[builder(setter(name = "data_source_internal"))]
+    #[builder(private, setter(name = "data_source_internal"))]
     data_source: Mutex<Box<dyn DataSource>>,
 }
 
@@ -105,7 +105,10 @@ impl GraphWindow {
             let t0 = s.last_t();
             s.ingest(&(w.data_source.get_mut().unwrap().get_data().unwrap())).unwrap();
             let t1 = s.last_t();
-            s.discard(0, t1 - (w.window_width as f32 * w.zoom_x) as u32).unwrap();
+
+            if t1 >= (w.window_width as f32 * w.zoom_x) as u32 {
+                s.discard(0, t1 - (w.window_width as f32 * w.zoom_x) as u32).unwrap();
+            }
 
             let patch_dims = (((t1 - t0) as f32 / w.zoom_x) as usize, w.window_height as usize);
             let mut patch_bytes = vec![0u8; patch_dims.0 * patch_dims.1 * 3];
