@@ -36,6 +36,6 @@ impl Point {
     }
 }
 
-pub trait DataSource: Debug + Send + Sync {
+pub trait DataSource: Debug + Send {
     fn get_data(&mut self) -> Result<Vec<Point>>;
 }
