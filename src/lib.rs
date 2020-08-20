@@ -36,7 +36,16 @@ impl Point {
     }
 }
 
+#[derive(Clone, Copy)]
+pub struct Color(u8, u8, u8);
+
 pub trait DataSource: Debug + Send {
     fn get_data(&mut self) -> Result<Vec<Point>>;
     fn get_num_values(&self) -> Result<usize>;
+    fn get_colors(&self) -> Result<Vec<Color>> {
+        Ok(vec![Color(255u8, 0u8,   0u8),
+                Color(0u8,   255u8, 0u8),
+                Color(0u8,   0u8,   255u8)
+        ])
+    }
 }

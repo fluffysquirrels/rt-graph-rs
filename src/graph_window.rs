@@ -4,14 +4,9 @@ use glium::glutin::event_loop::{EventLoop, ControlFlow};
 use glium::glutin::event::{Event, StartCause};
 use glium::glutin::dpi::PhysicalSize;
 
-use crate::{DataSource, Result, Store};
+use crate::{Color, DataSource, Result, Store};
 
-const COLS: [(u8, u8, u8); 3]
-    = [(255u8, 0u8,   0u8),
-       (0u8,   255u8, 0u8),
-       (0u8,   0u8,   255u8)];
-
-fn render_patch(store: &Store,
+fn render_patch(store: &Store, cols: &[Color],
          pb: &mut [u8], pbw: usize, pbh: usize,
          t0: u32, t1: u32, v0: u16, v1: u16
 ) -> Result<()> {
@@ -29,7 +24,7 @@ fn render_patch(store: &Store,
         }
 
         for ch in 0..store.val_len() {
-            let col = COLS[ch as usize % COLS.len()];
+            let col = cols[ch as usize % cols.len()];
             let y = (((p.vals()[ch as usize]-v0) as f32 / (v1-v0) as f32) * pbh as f32) as usize;
             if y >= pbh {
                 // Skip points that are outside our render patch.
@@ -121,7 +116,8 @@ impl GraphWindow {
             let mut patch_bytes = vec![0u8; patch_dims.0 * patch_dims.1 * 3];
             if patch_dims.0 >= 1 {
                 let new_t = last_t_drawn + (patch_dims.0 as f32 * w.zoom_x) as u32;
-                render_patch(&s, &mut patch_bytes, patch_dims.0, patch_dims.1,
+                let cols = w.data_source.lock().unwrap().get_colors().unwrap();
+                render_patch(&s, &cols, &mut patch_bytes, patch_dims.0, patch_dims.1,
                              last_t_drawn, new_t, 0, std::u16::MAX).unwrap();
                 let patch = glium::texture::RawImage2d::from_raw_rgb(patch_bytes,
                                                                      (patch_dims.0 as u32, patch_dims.1 as u32));
