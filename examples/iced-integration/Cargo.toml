@@ -1,0 +1,15 @@
+[package]
+name = "iced-integration"
+version = "0.1.0"
+authors = []
+edition = "2018"
+publish = false
+
+[dependencies]
+bytemuck = "1.0.0"
+cgmath = "0.17"
+env_logger = "0.7"
+iced_winit = { path = "../../../iced/winit" }
+iced_wgpu = { path = "../../../iced/wgpu" }
+log = "0.4.11"
+rt-graph = { path = "../.." }

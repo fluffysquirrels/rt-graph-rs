@@ -12,7 +12,7 @@ mod graph_window;
 pub use graph_window::{GraphWindow, GraphWindowBuilder};
 
 mod store;
-use store::Store;
+pub use store::Store;
 
 mod test_data_generator;
 pub use test_data_generator::TestDataGenerator;
@@ -37,7 +37,7 @@ impl Point {
 }
 
 #[derive(Clone, Copy)]
-pub struct Color(u8, u8, u8);
+pub struct Color(pub u8, pub u8, pub u8);
 
 pub trait DataSource: Debug + Send {
     fn get_data(&mut self) -> Result<Vec<Point>>;
