@@ -6,12 +6,16 @@ const GEN_T_INTERVAL: u32 = 20;
 #[derive(Debug)]
 pub struct TestDataGenerator {
     curr_t: u32,
+    interval: u32,
+    interval_inc: bool,
 }
 
 impl TestDataGenerator {
     pub fn new() -> TestDataGenerator {
         TestDataGenerator {
-            curr_t: 1
+            curr_t: 1,
+            interval: GEN_T_INTERVAL,
+            interval_inc: false,
         }
     }
 }
@@ -24,10 +28,22 @@ impl DataSource for TestDataGenerator {
             rv.push(Point {
                 t,
                 vs: vec![trig_sample(1.0/10000.0, 0.0, t),
-                         trig_sample(1.0/10000.0, std::f32::consts::PI / 3.0, t),
-                         trig_sample(1.0/5000.0,  0.0, t)],
+                         0,
+                         0],
             });
-            self.curr_t += GEN_T_INTERVAL;
+
+            self.curr_t += self.interval;
+        }
+
+        let switch = if self.interval_inc {
+            self.interval += 1;
+            self.interval == GEN_T_INTERVAL
+        } else {
+            self.interval -= 1;
+            self.interval == 1
+        };
+        if switch {
+            self.interval_inc = !self.interval_inc;
         }
         Ok(rv)
     }

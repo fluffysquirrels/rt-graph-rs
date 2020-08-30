@@ -9,8 +9,8 @@ publish = false
 bytemuck = "1.0.0"
 cgmath = "0.17"
 env_logger = "0.7"
-iced = { path = "../../../iced" }
-iced_winit = { path = "../../../iced/winit" }
-iced_wgpu = { path = "../../../iced/wgpu" }
+iced = { path = "../../../third-party/iced" }
+iced_winit = { path = "../../../third-party/iced/winit" }
+iced_wgpu = { path = "../../../third-party/iced/wgpu" }
 log = "0.4.11"
 rt-graph = { path = "../.." }

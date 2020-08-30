@@ -1,0 +1,3 @@
+[submodule "third-party/iced"]
+	path = third-party/iced
+	url = https://github.com/hecrj/iced
