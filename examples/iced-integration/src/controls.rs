@@ -3,27 +3,33 @@ use iced_winit::{
     slider, Align, Color, Column, Command, Element, Length, Program, Row,
     Slider, Text,
 };
+use iced::{
+    button,
+    HorizontalAlignment,
+    widget::{Button, Container, Space},
+};
 
 pub struct Controls {
-    background_color: Color,
-    sliders: [slider::State; 3],
+    pp_btn: button::State,
+    running: Running,
 }
 
-#[derive(Debug, Clone)]
+enum Running {
+    Play,
+    Pause,
+}
+
+#[derive(Clone, Debug)]
 pub enum Message {
-    BackgroundColorChanged(Color),
+    PlayPause,
 }
 
 impl Controls {
     pub fn new() -> Controls {
         Controls {
-            background_color: Color::BLACK,
-            sliders: Default::default(),
+            running: Running::Play,
+            pp_btn: button::State::default(),
         }
-    }
-
-    pub fn background_color(&self) -> Color {
-        self.background_color
     }
 }
 
@@ -33,73 +39,36 @@ impl Program for Controls {
 
     fn update(&mut self, message: Message) -> Command<Message> {
         match message {
-            Message::BackgroundColorChanged(color) => {
-                self.background_color = color;
-            }
+            Message::PlayPause => {
+                self.running = match self.running {
+                    Running::Play => Running::Pause,
+                    Running::Pause => Running::Play,
+                }
+            },
         }
 
         Command::none()
     }
 
     fn view(&mut self) -> Element<Message, Renderer> {
-        let [r, g, b] = &mut self.sliders;
-        let background_color = self.background_color;
-
-        let sliders = Row::new()
-            .width(Length::Units(500))
+            let content = Column::new()
             .spacing(20)
-            .push(
-                Slider::new(r, 0.0..=1.0, background_color.r, move |r| {
-                    Message::BackgroundColorChanged(Color {
-                        r,
-                        ..background_color
-                    })
-                })
-                .step(0.01),
-            )
-            .push(
-                Slider::new(g, 0.0..=1.0, background_color.g, move |g| {
-                    Message::BackgroundColorChanged(Color {
-                        g,
-                        ..background_color
-                    })
-                })
-                .step(0.01),
-            )
-            .push(
-                Slider::new(b, 0.0..=1.0, background_color.b, move |b| {
-                    Message::BackgroundColorChanged(Color {
-                        b,
-                        ..background_color
-                    })
-                })
-                .step(0.01),
-            );
-
-        Row::new()
+            .align_items(Align::Center)
+            .push(Space::new(Length::Units(800), Length::Units(200)))
+            .push(Text::new("My graph".to_owned()))
+            .push(Button::new(&mut self.pp_btn,
+                              Text::new(match self.running {
+                                  Running::Play => "Running",
+                                  Running::Pause => "Paused",
+                              })
+                                  .horizontal_alignment(HorizontalAlignment::Center))
+                  .on_press(Message::PlayPause)
+                  .width(Length::Units(150)));
+        Container::new(content)
             .width(Length::Fill)
             .height(Length::Fill)
-            .align_items(Align::End)
-            .push(
-                Column::new()
-                    .width(Length::Fill)
-                    .align_items(Align::End)
-                    .push(
-                        Column::new()
-                            .padding(10)
-                            .spacing(10)
-                            .push(
-                                Text::new("Background color")
-                                    .color(Color::WHITE),
-                            )
-                            .push(sliders)
-                            .push(
-                                Text::new(format!("{:?}", background_color))
-                                    .size(14)
-                                    .color(Color::WHITE),
-                            ),
-                    ),
-            )
+            .center_x()
+            .center_y()
             .into()
     }
 }

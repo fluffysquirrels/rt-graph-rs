@@ -477,6 +477,18 @@ dependencies = [
 ]
 
 [[package]]
+name = "core-text"
+version = "15.0.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "131b3fd1f8bd5db9f2b398fa4fdb6008c64afc04d447c306ac2c7e98fba2a61d"
+dependencies = [
+ "core-foundation 0.7.0",
+ "core-graphics 0.19.2",
+ "foreign-types",
+ "libc",
+]
+
+[[package]]
 name = "core-video-sys"
 version = "0.1.4"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -660,6 +672,27 @@ dependencies = [
 ]
 
 [[package]]
+name = "dirs"
+version = "2.0.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "13aea89a5c93364a98e9b37b2fa237effbb694d5cfe01c5b70941f7eb087d5e3"
+dependencies = [
+ "cfg-if",
+ "dirs-sys",
+]
+
+[[package]]
+name = "dirs-sys"
+version = "0.3.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8e93d7f5705de3e49895a2b5e0b8855a1c27f080192ae9c32a6432d50741a57a"
+dependencies = [
+ "libc",
+ "redox_users",
+ "winapi 0.3.9",
+]
+
+[[package]]
 name = "dispatch"
 version = "0.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -691,6 +724,22 @@ dependencies = [
 ]
 
 [[package]]
+name = "dodrio"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b7593dfc68e57dc1d058ada0f151ba07f4b05183c4da4c4df8ff651a81ef0fab"
+dependencies = [
+ "bumpalo 2.6.0",
+ "cfg-if",
+ "fxhash",
+ "js-sys",
+ "longest-increasing-subsequence",
+ "wasm-bindgen",
+ "wasm-bindgen-futures 0.4.17",
+ "web-sys",
+]
+
+[[package]]
 name = "downcast-rs"
 version = "1.2.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -705,6 +754,18 @@ dependencies = [
  "lazy_static",
  "libc",
  "winapi 0.3.9",
+]
+
+[[package]]
+name = "dwrote"
+version = "0.10.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bcdf488e3a52a7aa30a05732a3e58420e22acb4b2b75635a561fc6ffbcab59ef"
+dependencies = [
+ "lazy_static",
+ "libc",
+ "winapi 0.3.9",
+ "wio",
 ]
 
 [[package]]
@@ -797,9 +858,9 @@ dependencies = [
  "byteorder",
  "core-foundation 0.6.4",
  "core-graphics 0.17.3",
- "core-text",
- "dirs",
- "dwrote",
+ "core-text 13.3.2",
+ "dirs 1.0.5",
+ "dwrote 0.9.0",
  "euclid 0.20.14",
  "float-ord",
  "freetype",
@@ -808,6 +869,31 @@ dependencies = [
  "log",
  "lyon_path",
  "memmap",
+ "servo-fontconfig",
+ "walkdir",
+ "winapi 0.3.9",
+]
+
+[[package]]
+name = "font-kit"
+version = "0.6.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "8f953474ebbe3460775ed2da52435477cc029493284d6ceb635598586a2c6298"
+dependencies = [
+ "bitflags",
+ "byteorder",
+ "core-foundation 0.7.0",
+ "core-graphics 0.19.2",
+ "core-text 15.0.0",
+ "dirs 2.0.2",
+ "dwrote 0.10.0",
+ "float-ord",
+ "freetype",
+ "lazy_static",
+ "libc",
+ "log",
+ "pathfinder_geometry",
+ "pathfinder_simd",
  "servo-fontconfig",
  "walkdir",
  "winapi 0.3.9",
@@ -1493,11 +1579,22 @@ dependencies = [
 [[package]]
 name = "iced"
 version = "0.1.1"
+dependencies = [
+ "iced_core 0.2.1",
+ "iced_futures 0.1.2",
+ "iced_web 0.2.1",
+ "iced_wgpu 0.2.2",
+ "iced_winit 0.1.1",
+]
+
+[[package]]
+name = "iced"
+version = "0.1.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0d81ebdbe2ac776369d8fbb022c306f35cc2fa8ba5f4464d048f18b0e173534a"
 dependencies = [
  "iced_futures 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
- "iced_web",
+ "iced_web 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "iced_wgpu 0.2.3",
  "iced_winit 0.1.0",
 ]
@@ -1509,6 +1606,7 @@ dependencies = [
  "bytemuck",
  "cgmath",
  "env_logger",
+ "iced 0.1.1",
  "iced_wgpu 0.2.2",
  "iced_winit 0.1.1",
  "log",
@@ -1550,6 +1648,7 @@ name = "iced_graphics"
 version = "0.1.0"
 dependencies = [
  "bytemuck",
+ "font-kit 0.6.0",
  "glam 0.9.3",
  "iced_native 0.2.2",
  "iced_style 0.1.0",
@@ -1599,10 +1698,25 @@ dependencies = [
 [[package]]
 name = "iced_web"
 version = "0.2.1"
+dependencies = [
+ "dodrio 0.2.0",
+ "iced_core 0.2.1",
+ "iced_futures 0.1.2",
+ "iced_style 0.1.0",
+ "num-traits",
+ "url",
+ "wasm-bindgen",
+ "wasm-bindgen-futures 0.4.17",
+ "web-sys",
+]
+
+[[package]]
+name = "iced_web"
+version = "0.2.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "141e6eda620a3d068a3e2a5894064ab3675999f64f2936533030da2d8112fbc8"
 dependencies = [
- "dodrio",
+ "dodrio 0.1.0",
  "iced_core 0.2.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "iced_futures 0.1.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "iced_style 0.1.0 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -1635,7 +1749,7 @@ version = "0.2.3"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "2249966f8576b84029df4b31a1b88b46866592e98075402c4910e26fbce6a86d"
 dependencies = [
- "font-kit",
+ "font-kit 0.4.0",
  "glam 0.8.7",
  "glyph_brush 0.6.3",
  "guillotiere 0.4.4",
@@ -1856,6 +1970,12 @@ checksum = "4fabed175da42fed1fa0746b0ea71f412aa9d35e76e95e59b192c64b9dc2bf8b"
 dependencies = [
  "cfg-if",
 ]
+
+[[package]]
+name = "longest-increasing-subsequence"
+version = "0.1.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b3bd0dd2cd90571056fdb71f6275fada10131182f84899f4b2a916e565d81d86"
 
 [[package]]
 name = "lyon_geom"
@@ -2347,6 +2467,25 @@ dependencies = [
 ]
 
 [[package]]
+name = "pathfinder_geometry"
+version = "0.5.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "0b7b7e7b4ea703700ce73ebf128e1450eb69c3a8329199ffbfb9b2a0418e5ad3"
+dependencies = [
+ "log",
+ "pathfinder_simd",
+]
+
+[[package]]
+name = "pathfinder_simd"
+version = "0.5.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b451513912d6b3440e443aa75a73ab22203afedc4a90df8526d008c0f86f7cb3"
+dependencies = [
+ "rustc_version",
+]
+
+[[package]]
 name = "percent-encoding"
 version = "2.1.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -2740,7 +2879,7 @@ dependencies = [
  "derive_builder",
  "env_logger",
  "glium",
- "iced",
+ "iced 0.1.1 (registry+https://github.com/rust-lang/crates.io-index)",
  "iced_native 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "iced_wgpu 0.2.3",
  "log",
