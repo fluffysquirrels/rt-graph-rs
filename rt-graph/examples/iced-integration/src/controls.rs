@@ -68,7 +68,7 @@ impl Program for Controls {
             .width(Length::Fill)
             .height(Length::Fill)
             .center_x()
-            .center_y()
+            .align_y(Align::Start)
             .into()
     }
 }

@@ -20,13 +20,16 @@ use winit::{
 
 const GRAPH_W: u32 = 800;
 const GRAPH_H: u32 = 200;
+const WINDOW_H: u32 = 300;
 
 pub fn main() {
     env_logger::init();
 
     // Initialize winit
     let event_loop = EventLoop::new();
-    let window = winit::window::Window::new(&event_loop).unwrap();
+    let window = winit::window::WindowBuilder::new()
+        .with_inner_size(winit::dpi::PhysicalSize::new(GRAPH_W, WINDOW_H))
+        .build(&event_loop).unwrap();
 
     let physical_size = window.inner_size();
     let mut viewport = Viewport::with_physical_size(
@@ -59,7 +62,7 @@ pub fn main() {
             .expect("Request device")
     });
 
-    let format = wgpu::TextureFormat::Bgra8UnormSrgb;
+    let swap_chain_format = wgpu::TextureFormat::Bgra8UnormSrgb;
 
     let mut swap_chain = {
         let size = window.inner_size();
@@ -68,7 +71,7 @@ pub fn main() {
             &surface,
             &wgpu::SwapChainDescriptor {
                 usage: wgpu::TextureUsage::OUTPUT_ATTACHMENT,
-                format: format,
+                format: swap_chain_format,
                 width: size.width,
                 height: size.height,
                 present_mode: wgpu::PresentMode::Mailbox,
@@ -82,7 +85,7 @@ pub fn main() {
 
     // Initialize scene and GUI controls
     let mut tex_scene = TexScene::init(
-        GRAPH_W, GRAPH_H, format,
+        GRAPH_W, GRAPH_H, swap_chain_format,
         &device,
         &queue,
     );
@@ -100,10 +103,11 @@ pub fn main() {
         &mut renderer,
         &mut debug,
         );
-    let backing_tex_h = 500;
+
+    // Initialize the backing texture
     let backing_tex = device.create_texture(&wgpu::TextureDescriptor {
         label: None,
-        size: wgpu::Extent3d { width: GRAPH_W, height: backing_tex_h, depth: 1 },
+        size: wgpu::Extent3d { width: GRAPH_W, height: WINDOW_H, depth: 1 },
         mip_level_count: 1,
         sample_count: 1,
         dimension: wgpu::TextureDimension::D2,
@@ -118,15 +122,15 @@ pub fn main() {
             mip_level: 0,
             origin: wgpu::Origin3d { x: 0, y: 0, z: 0 },
         },
-        &*vec![100u8; (GRAPH_W * backing_tex_h * 4) as usize],
+        &*vec![100u8; (GRAPH_W * WINDOW_H * 4) as usize],
         wgpu::TextureDataLayout {
             offset: 0,
             bytes_per_row: GRAPH_W * 4,
-            rows_per_image: backing_tex_h,
+            rows_per_image: WINDOW_H,
         },
         wgpu::Extent3d {
             width: GRAPH_W,
-            height: backing_tex_h,
+            height: WINDOW_H,
             depth: 1,
         }
     );
@@ -211,7 +215,7 @@ pub fn main() {
                         &surface,
                         &wgpu::SwapChainDescriptor {
                             usage: wgpu::TextureUsage::OUTPUT_ATTACHMENT,
-                            format: format,
+                            format: swap_chain_format,
                             width: size.width,
                             height: size.height,
                             present_mode: wgpu::PresentMode::Mailbox,
@@ -226,6 +230,7 @@ pub fn main() {
 
                 let _program = state.program();
 
+                // Render the backing texture to the frame.
                 tex_scene.render(frame_tex_view, &device, &queue,
                                  &backing_tex, GRAPH_W, GRAPH_H);
 
@@ -284,40 +289,43 @@ pub fn main() {
                 store.discard(0, t_latest - (GRAPH_W as f32 * zoom_x) as u32).unwrap();
             }
 
+            // Calculate the size of the latest patch to render.
             let patch_dims = (((t_latest - last_t_drawn) as f32 / zoom_x).floor() as usize,
                               GRAPH_H as usize);
-            let mut patch_bytes = vec![0u8; patch_dims.0 * patch_dims.1 * 4];
+            // If there is more than a pixel's worth of data to render since we last drew,
+            // then draw it.
             if patch_dims.0 >= 1 {
+                let mut patch_bytes = vec![0u8; patch_dims.0 * patch_dims.1 * 4];
                 let new_t = last_t_drawn + (patch_dims.0 as f32 * zoom_x) as u32;
                 let cols = data_source.get_colors().unwrap();
                 render_patch(&store, &cols, &mut patch_bytes, patch_dims.0, patch_dims.1,
                              last_t_drawn, new_t, 0, std::u16::MAX).unwrap();
 
                 let patch_offset_x = last_x_drawn;
-                let patch_w = patch_dims.0;
 
                 // TODO: For writes that overlap the right side of the texture
                 // and wrap around, don't just ignore them but write a few pixels
                 // on the right and a few on the left.
-                if (patch_offset_x + (patch_w as u32)) < GRAPH_W {
+                if (patch_offset_x + (patch_dims.0 as u32)) < GRAPH_W {
+                    // Write the new patch to the backing texture.
                     queue.write_texture(
                         wgpu::TextureCopyViewBase::<&wgpu::Texture> {
                             texture: &backing_tex,
                             mip_level: 0,
                             origin: wgpu::Origin3d {
                                 x: patch_offset_x,
-                                y: backing_tex_h - GRAPH_H,
+                                y: WINDOW_H - GRAPH_H,
                                 z: 0
                             },
                         },
                         &*patch_bytes,
                         wgpu::TextureDataLayout {
                             offset: 0,
-                            bytes_per_row: patch_w as u32 * 4,
+                            bytes_per_row: patch_dims.0 as u32 * 4,
                             rows_per_image: GRAPH_H,
                         },
                         wgpu::Extent3d {
-                            width: patch_w as u32,
+                            width: patch_dims.0 as u32,
                             height: GRAPH_H,
                             depth: 1,
                         });
