@@ -14,7 +14,8 @@ pub struct Controls {
     running: Running,
 }
 
-enum Running {
+#[derive(Clone, Copy, Debug, Eq, PartialEq)]
+pub enum Running {
     Play,
     Pause,
 }
@@ -30,6 +31,10 @@ impl Controls {
             running: Running::Play,
             pp_btn: button::State::default(),
         }
+    }
+
+    pub fn running(&self) -> Running {
+        self.running
     }
 }
 
@@ -54,7 +59,10 @@ impl Program for Controls {
             let content = Column::new()
             .spacing(20)
             .align_items(Align::Center)
+
+            // Space for the graph.
             .push(Space::new(Length::Units(800), Length::Units(200)))
+
             .push(Text::new("My graph".to_owned()))
             .push(Button::new(&mut self.pp_btn,
                               Text::new(match self.running {

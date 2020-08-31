@@ -1,7 +1,7 @@
 mod controls;
 mod tex_scene;
 
-use controls::Controls;
+use controls::{Controls, Running};
 use tex_scene::TexScene;
 
 #[macro_use]
@@ -228,8 +228,6 @@ pub fn main() {
                 let frame = swap_chain.get_current_frame().expect("Next frame");
                 let frame_tex_view = &frame.output.view;
 
-                let _program = state.program();
-
                 // Render the backing texture to the frame.
                 tex_scene.render(frame_tex_view, &device, &queue,
                                  &backing_tex, GRAPH_W, GRAPH_H);
@@ -280,6 +278,11 @@ pub fn main() {
         }
 
         while next_ingest_timer < Instant::now() {
+            if state.program().running() == Running::Pause {
+                next_ingest_timer = Instant::now();
+                break;
+            }
+
             store.ingest(&*data_source.get_data().unwrap()).unwrap();
             next_ingest_timer += Duration::from_nanos(16_666_667);
             let t_latest = store.last_t();
