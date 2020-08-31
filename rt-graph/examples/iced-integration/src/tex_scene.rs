@@ -205,7 +205,7 @@ impl TexScene {
         }
     }
 
-    fn resize(
+    fn _resize(
         &mut self,
         sc_desc: &wgpu::SwapChainDescriptor,
         _device: &wgpu::Device,

@@ -39,7 +39,7 @@ pub fn main() {
     // Initialize wgpu
     let instance = wgpu::Instance::new(wgpu::BackendBit::PRIMARY);
     let surface = unsafe { instance.create_surface(&window) };
-    let (mut device, mut queue) = futures::executor::block_on(async {
+    let (mut device, queue) = futures::executor::block_on(async {
         let adapter = instance.request_adapter(
             &wgpu::RequestAdapterOptions {
                 power_preference: wgpu::PowerPreference::Default,
@@ -81,7 +81,6 @@ pub fn main() {
     let mut local_pool = futures::executor::LocalPool::new();
 
     // Initialize scene and GUI controls
-    // let scene = Scene::new(&mut device);
     let mut tex_scene = TexScene::init(
         GRAPH_W, GRAPH_H, format,
         &device,
@@ -281,9 +280,9 @@ pub fn main() {
             let t_latest = store.last_t();
 
             // Discard old data if there is any
-            // if t_latest >= (w.window_width as f32 * zoom_x) as u32 {
-            //     s.discard(0, t_latest - (w.window_width as f32 * zoom_x) as u32).unwrap();
-            // }
+            if t_latest >= (GRAPH_W as f32 * zoom_x) as u32 {
+                store.discard(0, t_latest - (GRAPH_W as f32 * zoom_x) as u32).unwrap();
+            }
 
             let patch_dims = (((t_latest - last_t_drawn) as f32 / zoom_x).floor() as usize,
                               GRAPH_H as usize);
@@ -296,6 +295,10 @@ pub fn main() {
 
                 let patch_offset_x = last_x_drawn;
                 let patch_w = patch_dims.0;
+
+                // TODO: For writes that overlap the right side of the texture
+                // and wrap around, don't just ignore them but write a few pixels
+                // on the right and a few on the left.
                 if (patch_offset_x + (patch_w as u32)) < GRAPH_W {
                     queue.write_texture(
                         wgpu::TextureCopyViewBase::<&wgpu::Texture> {
