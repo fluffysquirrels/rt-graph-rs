@@ -21,7 +21,10 @@ use winit::{
 const GRAPH_W: u32 = 800;
 const GRAPH_H: u32 = 200;
 const WINDOW_H: u32 = 300;
+
 const BASE_ZOOM_X: f32 = 1000.0;
+
+const BYTES_PER_PIXEL: usize = 4;
 
 pub fn main() {
     env_logger::init();
@@ -146,7 +149,7 @@ pub fn main() {
     let mut last_t_drawn = 0;
     let mut last_x_drawn = 0;
 
-    let mut zoom_x = 1000.0;
+    let mut zoom_x_drawn = state.program().zoom_x();
 
     // Run event loop
     event_loop.run(move |event, _, control_flow| {
@@ -279,6 +282,91 @@ pub fn main() {
             }
         }
 
+        let zoom_x_latest = state.program().zoom_x();
+        if zoom_x_drawn != zoom_x_latest {
+            zoom_x_drawn = zoom_x_latest;
+            let t_latest = store.last_t();
+
+            let cols = data_source.get_colors().unwrap();
+            let patch_offset_x = 0;
+            let window_dt = (GRAPH_W as f32 * zoom_x_drawn) as u32;
+            if t_latest < window_dt {
+                // Values don't fill the graph at the new zoom level,
+                // render what we have on the left
+                let t0 = 0;
+                let t1 = t_latest;
+                let w = (t1 as f32 / zoom_x_drawn).floor() as u32;
+                let patch_dims = (w as usize,
+                                  GRAPH_H as usize);
+                let mut patch_bytes = vec![0u8; patch_dims.0 * patch_dims.1 * BYTES_PER_PIXEL];
+                render_patch(&store, &cols, &mut patch_bytes, patch_dims.0, patch_dims.1,
+                             t0, t1, 0, std::u16::MAX).unwrap();
+                last_x_drawn = w;
+                // Write the new patch to the backing texture.
+                queue.write_texture(
+                    wgpu::TextureCopyViewBase::<&wgpu::Texture> {
+                        texture: &backing_tex,
+                        mip_level: 0,
+                        origin: wgpu::Origin3d {
+                            x: patch_offset_x,
+                            y: WINDOW_H - GRAPH_H,
+                            z: 0
+                        },
+                    },
+                    &*patch_bytes,
+                    wgpu::TextureDataLayout {
+                        offset: 0,
+                        bytes_per_row: (patch_dims.0 * BYTES_PER_PIXEL) as u32,
+                        rows_per_image: GRAPH_H,
+                    },
+                    wgpu::Extent3d {
+                        width: patch_dims.0 as u32,
+                        height: GRAPH_H,
+                        depth: 1,
+                    });
+            } else {
+                // t_latest >= window_dt
+                // Values fill the graph at the new zoom level, so
+                // render the latest data across the whole screen.
+
+                let t0 = t_latest - (GRAPH_W as f32 * zoom_x_drawn) as u32;
+                let t1 = t_latest;
+                let patch_dims = (GRAPH_W as usize,
+                                  GRAPH_H as usize);
+                let mut patch_bytes = vec![0u8; patch_dims.0 * patch_dims.1 * BYTES_PER_PIXEL];
+                render_patch(&store, &cols, &mut patch_bytes, patch_dims.0, patch_dims.1,
+                             t0, t1, 0, std::u16::MAX).unwrap();
+                let patch_offset_x = 0;
+                last_x_drawn = 0;
+
+                // Write the new patch to the backing texture.
+                queue.write_texture(
+                    wgpu::TextureCopyViewBase::<&wgpu::Texture> {
+                        texture: &backing_tex,
+                        mip_level: 0,
+                        origin: wgpu::Origin3d {
+                            x: patch_offset_x,
+                            y: WINDOW_H - GRAPH_H,
+                            z: 0
+                        },
+                    },
+                    &*patch_bytes,
+                    wgpu::TextureDataLayout {
+                        offset: 0,
+                        bytes_per_row: (patch_dims.0 * BYTES_PER_PIXEL) as u32,
+                        rows_per_image: GRAPH_H,
+                    },
+                    wgpu::Extent3d {
+                        width: patch_dims.0 as u32,
+                        height: GRAPH_H,
+                        depth: 1,
+                    });
+            }
+
+
+            last_t_drawn = t_latest;
+        }
+
         while next_ingest_timer < Instant::now() {
             if state.program().running() == Running::Pause {
                 next_ingest_timer = Instant::now();
@@ -290,19 +378,19 @@ pub fn main() {
             let t_latest = store.last_t();
 
             // Discard old data if there is any
-            let window_dt = (GRAPH_W as f32 * BASE_ZOOM_X) as u32;
-            if t_latest >= window_dt {
-                store.discard(0, t_latest - window_dt).unwrap();
+            let window_base_dt = (GRAPH_W as f32 * BASE_ZOOM_X) as u32;
+            if t_latest >= window_base_dt {
+                store.discard(0, t_latest - window_base_dt).unwrap();
             }
 
             // Calculate the size of the latest patch to render.
-            let patch_dims = (((t_latest - last_t_drawn) as f32 / zoom_x).floor() as usize,
+            let patch_dims = (((t_latest - last_t_drawn) as f32 / zoom_x_drawn).floor() as usize,
                               GRAPH_H as usize);
             // If there is more than a pixel's worth of data to render since we last drew,
             // then draw it.
             if patch_dims.0 >= 1 {
-                let mut patch_bytes = vec![0u8; patch_dims.0 * patch_dims.1 * 4];
-                let new_t = last_t_drawn + (patch_dims.0 as f32 * zoom_x) as u32;
+                let mut patch_bytes = vec![0u8; patch_dims.0 * patch_dims.1 * BYTES_PER_PIXEL];
+                let new_t = last_t_drawn + (patch_dims.0 as f32 * zoom_x_drawn) as u32;
                 let cols = data_source.get_colors().unwrap();
                 render_patch(&store, &cols, &mut patch_bytes, patch_dims.0, patch_dims.1,
                              last_t_drawn, new_t, 0, std::u16::MAX).unwrap();
@@ -327,7 +415,7 @@ pub fn main() {
                         &*patch_bytes,
                         wgpu::TextureDataLayout {
                             offset: 0,
-                            bytes_per_row: patch_dims.0 as u32 * 4,
+                            bytes_per_row: (patch_dims.0 * BYTES_PER_PIXEL) as u32,
                             rows_per_image: GRAPH_H,
                         },
                         wgpu::Extent3d {
