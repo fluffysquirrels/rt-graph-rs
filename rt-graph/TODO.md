@@ -3,6 +3,7 @@
 ## Bugs
 * Fix frame rate, event loop.
 * Doesn't draw last few pixels.
+* Can zoom out too far.
 
 ## Features
 * Pause button
