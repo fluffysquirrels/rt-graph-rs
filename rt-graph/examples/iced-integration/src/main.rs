@@ -21,6 +21,7 @@ use winit::{
 const GRAPH_W: u32 = 800;
 const GRAPH_H: u32 = 200;
 const WINDOW_H: u32 = 300;
+const BASE_ZOOM_X: f32 = 1000.0;
 
 pub fn main() {
     env_logger::init();
@@ -122,7 +123,7 @@ pub fn main() {
             mip_level: 0,
             origin: wgpu::Origin3d { x: 0, y: 0, z: 0 },
         },
-        &*vec![100u8; (GRAPH_W * WINDOW_H * 4) as usize],
+        &*vec![200u8; (GRAPH_W * WINDOW_H * 4) as usize],
         wgpu::TextureDataLayout {
             offset: 0,
             bytes_per_row: GRAPH_W * 4,
@@ -145,7 +146,7 @@ pub fn main() {
     let mut last_t_drawn = 0;
     let mut last_x_drawn = 0;
 
-    let zoom_x = 1000.0;
+    let mut zoom_x = 1000.0;
 
     // Run event loop
     event_loop.run(move |event, _, control_flow| {
@@ -258,13 +259,14 @@ pub fn main() {
                         ),
                     );
 
+                // Recall the staging belt
                 local_pool
                     .spawner()
                     .spawn(staging_belt.recall())
                     .expect("Recall staging buffers");
-
                 local_pool.run_until_stalled();
 
+                // Calculate FPS and log it once per second.
                 fps_count += 1;
                 if fps_timer.elapsed().as_secs() >= 1 {
                     debug!("fps: {}", fps_count);
@@ -288,8 +290,9 @@ pub fn main() {
             let t_latest = store.last_t();
 
             // Discard old data if there is any
-            if t_latest >= (GRAPH_W as f32 * zoom_x) as u32 {
-                store.discard(0, t_latest - (GRAPH_W as f32 * zoom_x) as u32).unwrap();
+            let window_dt = (GRAPH_W as f32 * BASE_ZOOM_X) as u32;
+            if t_latest >= window_dt {
+                store.discard(0, t_latest - window_dt).unwrap();
             }
 
             // Calculate the size of the latest patch to render.
