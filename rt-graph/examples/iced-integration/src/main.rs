@@ -286,28 +286,10 @@ pub fn main() {
                 render_patch(&store, &cols, &mut patch_bytes, patch_dims.0, patch_dims.1,
                              t0, t1, 0, std::u16::MAX).unwrap();
                 last_x_drawn = w;
-                // Write the new patch to the backing texture.
-                queue.write_texture(
-                    wgpu::TextureCopyViewBase::<&wgpu::Texture> {
-                        texture: &backing_tex,
-                        mip_level: 0,
-                        origin: wgpu::Origin3d {
-                            x: patch_offset_x,
-                            y: WINDOW_H - GRAPH_H,
-                            z: 0
-                        },
-                    },
-                    &*patch_bytes,
-                    wgpu::TextureDataLayout {
-                        offset: 0,
-                        bytes_per_row: (patch_dims.0 * BYTES_PER_PIXEL) as u32,
-                        rows_per_image: GRAPH_H,
-                    },
-                    wgpu::Extent3d {
-                        width: patch_dims.0 as u32,
-                        height: GRAPH_H,
-                        depth: 1,
-                    });
+
+                copy_patch(&queue, &backing_tex,
+                           &patch_bytes[..], patch_dims.0 as u32, patch_dims.1 as u32,
+                           0, 0);
             } else {
                 // t_latest >= window_dt
                 // Values fill the graph at the new zoom level, so
@@ -323,28 +305,9 @@ pub fn main() {
                 let patch_offset_x = 0;
                 last_x_drawn = 0;
 
-                // Write the new patch to the backing texture.
-                queue.write_texture(
-                    wgpu::TextureCopyViewBase::<&wgpu::Texture> {
-                        texture: &backing_tex,
-                        mip_level: 0,
-                        origin: wgpu::Origin3d {
-                            x: patch_offset_x,
-                            y: WINDOW_H - GRAPH_H,
-                            z: 0
-                        },
-                    },
-                    &*patch_bytes,
-                    wgpu::TextureDataLayout {
-                        offset: 0,
-                        bytes_per_row: (patch_dims.0 * BYTES_PER_PIXEL) as u32,
-                        rows_per_image: GRAPH_H,
-                    },
-                    wgpu::Extent3d {
-                        width: patch_dims.0 as u32,
-                        height: GRAPH_H,
-                        depth: 1,
-                    });
+                copy_patch(&queue, &backing_tex,
+                           &patch_bytes[..], patch_dims.0 as u32, patch_dims.1 as u32,
+                           0, 0);
             }
 
 
@@ -385,28 +348,9 @@ pub fn main() {
                 // and wrap around, don't just ignore them but write a few pixels
                 // on the right and a few on the left.
                 if (patch_offset_x + (patch_dims.0 as u32)) < GRAPH_W {
-                    // Write the new patch to the backing texture.
-                    queue.write_texture(
-                        wgpu::TextureCopyViewBase::<&wgpu::Texture> {
-                            texture: &backing_tex,
-                            mip_level: 0,
-                            origin: wgpu::Origin3d {
-                                x: patch_offset_x,
-                                y: WINDOW_H - GRAPH_H,
-                                z: 0
-                            },
-                        },
-                        &*patch_bytes,
-                        wgpu::TextureDataLayout {
-                            offset: 0,
-                            bytes_per_row: (patch_dims.0 * BYTES_PER_PIXEL) as u32,
-                            rows_per_image: GRAPH_H,
-                        },
-                        wgpu::Extent3d {
-                            width: patch_dims.0 as u32,
-                            height: GRAPH_H,
-                            depth: 1,
-                        });
+                    copy_patch(&queue, &backing_tex,
+                               &patch_bytes[..], patch_dims.0 as u32, patch_dims.1 as u32,
+                               patch_offset_x, 0);
                 }
 
                 last_t_drawn = new_t;
@@ -477,4 +421,32 @@ fn render_patch(
     }
 
     Ok(())
+}
+
+/// Write the new patch to the backing texture.
+fn copy_patch(queue: &wgpu::Queue, backing_tex: &wgpu::Texture,
+              data: &[u8], w: u32, h: u32,
+              offset_x: u32, offset_y: u32) {
+    queue.write_texture(
+        wgpu::TextureCopyViewBase::<&wgpu::Texture> {
+            texture: &backing_tex,
+            mip_level: 0,
+            origin: wgpu::Origin3d {
+                x: offset_x,
+                y: WINDOW_H - GRAPH_H + offset_y,
+                z: 0
+            },
+        },
+        data,
+        wgpu::TextureDataLayout {
+            offset: 0,
+            bytes_per_row: w * (BYTES_PER_PIXEL as u32),
+            rows_per_image: h,
+        },
+        wgpu::Extent3d {
+            width: w,
+            height: GRAPH_H,
+            depth: 1,
+        }
+    );
 }
