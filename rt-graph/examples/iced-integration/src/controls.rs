@@ -1,7 +1,7 @@
 use iced_wgpu::Renderer;
 use iced_winit::{
-    slider, Align, Color, Column, Command, Element, Length, Program, Row,
-    Slider, Text,
+    Align, Column, Command, Element, Length, Program, Row,
+    Text,
 };
 use iced::{
     button,
