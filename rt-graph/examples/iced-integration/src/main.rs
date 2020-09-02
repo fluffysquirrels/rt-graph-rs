@@ -120,24 +120,7 @@ pub fn main() {
                wgpu::TextureUsage::COPY_DST |
                wgpu::TextureUsage::SAMPLED,
     });
-    queue.write_texture(
-        wgpu::TextureCopyViewBase::<&wgpu::Texture> {
-            texture: &backing_tex,
-            mip_level: 0,
-            origin: wgpu::Origin3d { x: 0, y: 0, z: 0 },
-        },
-        &*vec![200u8; (GRAPH_W * WINDOW_H * 4) as usize],
-        wgpu::TextureDataLayout {
-            offset: 0,
-            bytes_per_row: GRAPH_W * 4,
-            rows_per_image: WINDOW_H,
-        },
-        wgpu::Extent3d {
-            width: GRAPH_W,
-            height: WINDOW_H,
-            depth: 1,
-        }
-    );
+    clear_backing_tex(&queue, &backing_tex);
 
     let mut fps_timer = Instant::now();
     let mut fps_count = 0;
@@ -290,6 +273,7 @@ pub fn main() {
             let cols = data_source.get_colors().unwrap();
             let patch_offset_x = 0;
             let window_dt = (GRAPH_W as f32 * zoom_x_drawn) as u32;
+            clear_backing_tex(&queue, &backing_tex);
             if t_latest < window_dt {
                 // Values don't fill the graph at the new zoom level,
                 // render what we have on the left
@@ -435,6 +419,27 @@ pub fn main() {
 //             std::thread::sleep(next_frame - now)
 //         }
     })
+}
+
+fn clear_backing_tex(queue: &wgpu::Queue, tex: &wgpu::Texture) {
+    queue.write_texture(
+        wgpu::TextureCopyViewBase::<&wgpu::Texture> {
+            texture: &tex,
+            mip_level: 0,
+            origin: wgpu::Origin3d { x: 0, y: 0, z: 0 },
+        },
+        &*vec![200u8; (GRAPH_W * WINDOW_H * 4) as usize],
+        wgpu::TextureDataLayout {
+            offset: 0,
+            bytes_per_row: GRAPH_W * 4,
+            rows_per_image: WINDOW_H,
+        },
+        wgpu::Extent3d {
+            width: GRAPH_W,
+            height: WINDOW_H,
+            depth: 1,
+        }
+    );
 }
 
 fn render_patch(
