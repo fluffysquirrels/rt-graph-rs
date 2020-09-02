@@ -287,9 +287,10 @@ pub fn main() {
                              t0, t1, 0, std::u16::MAX).unwrap();
                 last_x_drawn = w;
 
-                copy_patch(&queue, &backing_tex,
-                           &patch_bytes[..], patch_dims.0 as u32, patch_dims.1 as u32,
-                           0, 0);
+                copy_patch(&queue, &backing_tex, &patch_bytes[..],
+                           patch_dims.0 as u32, patch_dims.1 as u32, // patch dims
+                           0, 0 // offset
+                );
             } else {
                 // t_latest >= window_dt
                 // Values fill the graph at the new zoom level, so
@@ -305,9 +306,10 @@ pub fn main() {
                 let patch_offset_x = 0;
                 last_x_drawn = 0;
 
-                copy_patch(&queue, &backing_tex,
-                           &patch_bytes[..], patch_dims.0 as u32, patch_dims.1 as u32,
-                           0, 0);
+                copy_patch(&queue, &backing_tex, &patch_bytes[..],
+                           patch_dims.0 as u32, patch_dims.1 as u32,
+                           0, 0 // offset
+                );
             }
 
 
@@ -348,9 +350,10 @@ pub fn main() {
                 // and wrap around, don't just ignore them but write a few pixels
                 // on the right and a few on the left.
                 if (patch_offset_x + (patch_dims.0 as u32)) < GRAPH_W {
-                    copy_patch(&queue, &backing_tex,
-                               &patch_bytes[..], patch_dims.0 as u32, patch_dims.1 as u32,
-                               patch_offset_x, 0);
+                    copy_patch(&queue, &backing_tex, &patch_bytes[..],
+                               patch_dims.0 as u32, patch_dims.1 as u32,
+                               patch_offset_x, 0 // offset
+                    );
                 }
 
                 last_t_drawn = new_t;
