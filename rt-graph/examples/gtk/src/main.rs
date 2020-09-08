@@ -201,12 +201,8 @@ fn tick(ws: &WindowState) {
                         patch_dims.0 as f64, // width
                         patch_dims.1 as f64  /* height */);
             c.set_source_rgb(0.0, 0.0, 0.0);
-            c.fill();
+            c.fill_preserve();
             // Fill target area with patch data.
-            c.rectangle(patch_offset_x as f64,
-                        0.0, // offset y
-                        patch_dims.0 as f64, // width
-                        patch_dims.1 as f64  /* height */);
             c.set_source_surface(&patch_surface,
                                  patch_offset_x as f64 /* offset x */,
                                  0.0 /* offset y*/);
