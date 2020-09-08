@@ -27,9 +27,9 @@ impl DataSource for TestDataGenerator {
             let t = self.curr_t;
             rv.push(Point {
                 t,
-                vs: vec![trig_sample(1.0/10000.0, 0.0, t),
-                         0,
-                         0],
+                vs: vec![trig_sample(1.0, 1.0/10000.0, 0.0, t),
+                         trig_sample(1.0, 1.0/10000.0, std::f32::consts::PI / 3.0, t),
+                         trig_sample(0.5, 1.0/5000.0,  0.0, t)],
             });
 
             self.curr_t += self.interval;
@@ -53,6 +53,8 @@ impl DataSource for TestDataGenerator {
     }
 }
 
-fn trig_sample(scale: f32, offset: f32, t: u32) -> u16 {
-    ((((offset + t as f32 * scale).sin() + 1.0) / 2.0) * std::u16::MAX as f32) as u16
+fn trig_sample(scale: f32, scale_period: f32, offset: f32, t: u32) -> u16 {
+    let float_val = (offset + t as f32 * scale_period).sin() * scale;
+    let int_val = (((float_val + 1.0) / 2.0) * std::u16::MAX as f32) as u16;
+    int_val
 }
