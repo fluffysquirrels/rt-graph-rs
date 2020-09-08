@@ -1,9 +1,6 @@
 # TODO
 
 ## Bugs
-* Fix frame rate, event loop.
-* Doesn't draw last few pixels.
-* Can zoom out too far.
 
 ## Features
 * Pause button
@@ -11,3 +8,8 @@
 * Mouse wheel to zoom x
 * Left mouse to zoom x
 * Alt left mouse to zoom box
+* Mouse over / click to see raw values
+* Embeddable panel
+* Daniel has 5 graphs, wants them all in sync.
+  * Leave it up to controls at a higher level how to navigate, each graph just has show methods.
+  * One graph is just the n=1 case
