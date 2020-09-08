@@ -20,5 +20,4 @@ rand = "0.7"
 [workspace]
 members = [
     "examples/gtk",
-    "examples/iced-integration",
 ]
