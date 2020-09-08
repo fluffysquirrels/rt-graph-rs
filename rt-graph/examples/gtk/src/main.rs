@@ -10,6 +10,7 @@ use std::{
     cell::{Cell, RefCell},
     env::args,
     rc::Rc,
+    time::Instant,
 };
 
 const GRAPH_W: u32 = 800;
@@ -26,13 +27,16 @@ struct WindowState {
     last_t_drawn: Cell<u32>,
     last_x_drawn: Cell<u32>,
     zoom_x: Cell<f32>,
+
+    fps_count: Cell<u16>,
+    fps_timer: Cell<Instant>,
 }
 
 fn main() {
     env_logger::init();
     let application =
         gtk::Application::new(Some("com.github.fluffysquirrels.rt-graph"), Default::default())
-            .expect("Initialization failed...");
+            .expect("Application::new failed");
 
     application.connect_activate(|app| {
         build_ui(app);
@@ -117,6 +121,9 @@ fn build_ui(application: &gtk::Application) {
         last_t_drawn: Cell::new(0),
         last_x_drawn: Cell::new(0),
         zoom_x: Cell::new(1000.0),
+
+        fps_count: Cell::new(0),
+        fps_timer: Cell::new(Instant::now()),
     });
 
     // Set signal handlers that require WindowState
@@ -126,7 +133,7 @@ fn build_ui(application: &gtk::Application) {
     });
 
     let wsc = ws.clone();
-    glib::source::timeout_add_local(16 /* ms */, move || {
+    let _tick_id = glib::source::timeout_add_local(16 /* ms */, move || {
         tick(&*wsc);
         Continue(true)
     });
@@ -136,16 +143,27 @@ fn build_ui(application: &gtk::Application) {
 }
 
 fn graph_draw(_ctrl: &gtk::DrawingArea, ctx: &cairo::Context, ws: &WindowState) -> Inhibit {
+    trace!("graph_draw");
+
     // Copy from the backing_surface, which was updated elsewhere
     ctx.rectangle(0.0, 0.0, GRAPH_W as f64, GRAPH_H as f64);
     ctx.set_source_surface(&ws.backing_surface, 0.0, 0.0);
     ctx.fill();
+
+    // Calculate and log FPS.
+    ws.fps_count.set(ws.fps_count.get() + 1);
+    let now = Instant::now();
+    if (now - ws.fps_timer.get()).as_secs() >= 1 {
+        debug!("fps: {}", ws.fps_count.get());
+        ws.fps_count.set(0);
+        ws.fps_timer.set(now);
+    }
+
     Inhibit(false)
 }
 
 fn tick(ws: &WindowState) {
-
-    trace!("timeout");
+    trace!("tick");
 
     // Ingest new data
     let new_data = ws.data_source.borrow_mut().get_data().unwrap();
