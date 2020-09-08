@@ -150,7 +150,7 @@ fn graph_draw(_ctrl: &gtk::DrawingArea, ctx: &cairo::Context, ws: &WindowState) 
     ctx.set_source_surface(&ws.backing_surface, 0.0, 0.0);
     ctx.fill();
 
-    // Calculate and log FPS.
+    // Calculate FPS, log it once a second.
     ws.fps_count.set(ws.fps_count.get() + 1);
     let now = Instant::now();
     if (now - ws.fps_timer.get()).as_secs() >= 1 {
