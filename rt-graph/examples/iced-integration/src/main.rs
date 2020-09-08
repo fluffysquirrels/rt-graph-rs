@@ -426,7 +426,7 @@ fn render_patch(
     Ok(())
 }
 
-/// Write the new patch to the backing texture.
+/// Write the patch bytes to the backing texture.
 fn copy_patch(queue: &wgpu::Queue, backing_tex: &wgpu::Texture,
               data: &[u8], w: u32, h: u32,
               offset_x: u32, offset_y: u32) {
