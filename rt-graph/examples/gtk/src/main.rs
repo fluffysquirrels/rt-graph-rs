@@ -19,13 +19,14 @@ const BASE_ZOOM_X: f32 = 1000.0;
 const BYTES_PER_PIXEL: usize = 4;
 
 struct WindowState {
-    backing_surface: cairo::Surface,
+    backing_surface: RefCell<cairo::Surface>,
+    temp_surface: RefCell<cairo::Surface>,
+
     data_source: RefCell<Box<dyn rt_graph::DataSource>>,
     graph_drawing_area: gtk::DrawingArea,
     store: RefCell<rt_graph::Store>,
 
     last_t_drawn: Cell<u32>,
-    last_x_drawn: Cell<u32>,
     zoom_x: Cell<f32>,
 
     fps_count: Cell<u16>,
@@ -110,16 +111,30 @@ fn build_ui(application: &gtk::Application) {
         c.rectangle(0.0, 0.0, GRAPH_W as f64, GRAPH_H as f64);
         c.fill();
     }
+    let temp_surface = window.get_window().unwrap() // get gdk::Window
+        .create_similar_image_surface(
+            cairo::Format::Rgb24.into(),
+            GRAPH_W as i32 /* width */,
+            GRAPH_H as i32 /* height */,
+            1 /* scale */).unwrap();
+    {
+        // Clear temp_surface
+        let c = cairo::Context::new(&temp_surface);
+        c.set_source_rgb(0.4, 0.4, 0.4);
+        c.rectangle(0.0, 0.0, GRAPH_W as f64, GRAPH_H as f64);
+        c.fill();
+    }
     let ds = rt_graph::TestDataGenerator::new();
     let s = rt_graph::Store::new(ds.get_num_values().unwrap() as u8);
     let ws = Rc::new(WindowState {
-        backing_surface,
+        backing_surface: RefCell::new(backing_surface),
+        temp_surface: RefCell::new(temp_surface),
+
         store: RefCell::new(s),
         data_source: RefCell::new(Box::new(ds)),
         graph_drawing_area: graph.clone(),
 
         last_t_drawn: Cell::new(0),
-        last_x_drawn: Cell::new(0),
         zoom_x: Cell::new(1000.0),
 
         fps_count: Cell::new(0),
@@ -147,7 +162,7 @@ fn graph_draw(_ctrl: &gtk::DrawingArea, ctx: &cairo::Context, ws: &WindowState) 
 
     // Copy from the backing_surface, which was updated elsewhere
     ctx.rectangle(0.0, 0.0, GRAPH_W as f64, GRAPH_H as f64);
-    ctx.set_source_surface(&ws.backing_surface, 0.0, 0.0);
+    ctx.set_source_surface(&ws.backing_surface.borrow(), 0.0, 0.0);
     ctx.fill();
 
     // Calculate FPS, log it once a second.
@@ -180,6 +195,7 @@ fn tick(ws: &WindowState) {
     // Draw the new data.
 
     // Calculate the size of the latest patch to render.
+    // TODO: Handle when patch_dims.0 > GRAPH_W.
     let patch_dims =
         (((t_latest - ws.last_t_drawn.get()) as f32 / ws.zoom_x.get()).floor() as usize,
          GRAPH_H as usize);
@@ -194,21 +210,27 @@ fn tick(ws: &WindowState) {
                      ws.last_t_drawn.get(), new_t,
                      0, std::u16::MAX).unwrap();
 
-        let patch_offset_x = ws.last_x_drawn.get();
+        let patch_offset_x = GRAPH_W - (patch_dims.0 as u32);
 
-        // TODO: For writes that overlap the right side of the texture
-        // and wrap around, don't just ignore them but write the first
-        // pixels on the right and the remainder on the left.
-        if (patch_offset_x + (patch_dims.0 as u32)) < GRAPH_W {
-            // Simple case: the patch doesn't overlap the right side of the texture.
-
-            copy_patch(&ws.backing_surface, patch_bytes,
-                       patch_dims.0, patch_dims.1,
-                       patch_offset_x as usize, 0 /* offset y */);
+        // Copy existing graph to the temp surface, offsetting it to the left.
+        {
+            let c = cairo::Context::new(&*ws.temp_surface.borrow());
+            c.set_source_surface(&*ws.backing_surface.borrow(),
+                                 -(patch_dims.0 as f64) /* x offset*/, 0.0 /* y offset */);
+            c.rectangle(0.0, // x offset
+                        0.0, // y offset
+                        patch_offset_x as f64, // width
+                        GRAPH_H as f64); // height
+            c.fill();
         }
+        copy_patch(&ws.temp_surface.borrow(), patch_bytes,
+                   patch_dims.0 /* w */, patch_dims.1 /* h */,
+                   patch_offset_x as usize /* x */, 0 /* y */);
+
+        // Present new graph by swapping the surfaces.
+        ws.backing_surface.swap(&ws.temp_surface);
 
         ws.last_t_drawn.set(new_t);
-        ws.last_x_drawn.set((ws.last_x_drawn.get() + patch_dims.0 as u32) % GRAPH_W as u32);
     }
 
     // Invalidate the graph widget so we get a draw request.
