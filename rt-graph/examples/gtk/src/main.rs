@@ -202,29 +202,9 @@ fn tick(ws: &WindowState) {
         if (patch_offset_x + (patch_dims.0 as u32)) < GRAPH_W {
             // Simple case: the patch doesn't overlap the right side of the texture.
 
-            // Create an ImageSurface from our bytes
-            let patch_surface = cairo::ImageSurface::create_for_data(
-                patch_bytes,
-                cairo::Format::ARgb32,
-                patch_dims.0 as i32,
-                patch_dims.1 as i32,
-                (patch_dims.0 * BYTES_PER_PIXEL) as i32 /* stride */
-            ).unwrap();
-
-            // Copy from the ImageSurface to backing_surface
-            let c = cairo::Context::new(&ws.backing_surface);
-            // Fill target area with background colour.
-            c.rectangle(patch_offset_x as f64,
-                        0.0, // offset y
-                        patch_dims.0 as f64, // width
-                        patch_dims.1 as f64  /* height */);
-            c.set_source_rgb(0.0, 0.0, 0.0);
-            c.fill_preserve();
-            // Fill target area with patch data.
-            c.set_source_surface(&patch_surface,
-                                 patch_offset_x as f64 /* offset x */,
-                                 0.0 /* offset y*/);
-            c.fill();
+            copy_patch(&ws.backing_surface, patch_bytes,
+                       patch_dims.0, patch_dims.1,
+                       patch_offset_x as usize, 0 /* offset y */);
         }
 
         ws.last_t_drawn.set(new_t);
@@ -270,4 +250,34 @@ fn render_patch(
     }
 
     Ok(())
+}
+
+fn copy_patch(
+    backing_surface: &cairo::Surface,
+    bytes: Vec<u8>,
+    w: usize, h: usize,
+    x: usize, y: usize) {
+    // Create an ImageSurface from our bytes
+    let patch_surface = cairo::ImageSurface::create_for_data(
+        bytes,
+        cairo::Format::ARgb32,
+        w as i32,
+        h as i32,
+        (w * BYTES_PER_PIXEL) as i32 /* stride */
+            ).unwrap();
+
+    // Copy from the ImageSurface to backing_surface
+    let c = cairo::Context::new(&backing_surface);
+    // Fill target area with background colour.
+    c.rectangle(x as f64,
+                y as f64,
+                w as f64, // width
+                h as f64  /* height */);
+    c.set_source_rgb(0.0, 0.0, 0.0);
+    c.fill_preserve();
+    // Fill target area with patch data.
+    c.set_source_surface(&patch_surface,
+                         x as f64,
+                         y as f64);
+    c.fill();
 }
