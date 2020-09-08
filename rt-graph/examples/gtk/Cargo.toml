@@ -6,8 +6,11 @@ edition = "2018"
 publish = false
 
 [dependencies]
+cairo-rs = "0.9.1"
 env_logger = "0.7"
+gdk = "0.13.2"
 gio = "0.9.1"
+glib = "0.10.0"
 gtk = "0.9.0"
 log = "0.4.11"
 rt-graph = { path = "../.." }
