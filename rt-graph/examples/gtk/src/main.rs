@@ -140,7 +140,8 @@ fn graph_draw(_ctrl: &gtk::DrawingArea, ctx: &cairo::Context, ws: &WindowState) 
 
     // Copy from the backing_surface, which was updated elsewhere
     ctx.rectangle(0.0, 0.0, GRAPH_W as f64, GRAPH_H as f64);
-    ctx.set_source_surface(&ws.backing_surface.borrow(), 0.0, 0.0);
+    ctx.set_source_surface(&ws.backing_surface.borrow(),
+                           0.0 /* offset x */, 0.0 /* offset y */);
     ctx.fill();
 
     // Calculate FPS, log it once a second.
