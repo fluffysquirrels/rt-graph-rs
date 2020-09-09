@@ -98,32 +98,10 @@ fn build_ui(application: &gtk::Application) {
     // get_window() below, in order to create_similar_image_surface.
     window.show();
 
-    let backing_surface = window.get_window().unwrap() // get gdk::Window
-        .create_similar_image_surface(
-            cairo::Format::Rgb24.into(),
-            GRAPH_W as i32 /* width */,
-            GRAPH_H as i32 /* height */,
-            1 /* scale */).unwrap();
-    {
-        // Clear backing_surface
-        let c = cairo::Context::new(&backing_surface);
-        c.set_source_rgb(0.4, 0.4, 0.4);
-        c.rectangle(0.0, 0.0, GRAPH_W as f64, GRAPH_H as f64);
-        c.fill();
-    }
-    let temp_surface = window.get_window().unwrap() // get gdk::Window
-        .create_similar_image_surface(
-            cairo::Format::Rgb24.into(),
-            GRAPH_W as i32 /* width */,
-            GRAPH_H as i32 /* height */,
-            1 /* scale */).unwrap();
-    {
-        // Clear temp_surface
-        let c = cairo::Context::new(&temp_surface);
-        c.set_source_rgb(0.4, 0.4, 0.4);
-        c.rectangle(0.0, 0.0, GRAPH_W as f64, GRAPH_H as f64);
-        c.fill();
-    }
+    let backing_surface = create_backing_surface(&window.get_window().unwrap(),
+                                                 GRAPH_W, GRAPH_H);
+    let temp_surface = create_backing_surface(&window.get_window().unwrap(),
+                                              GRAPH_W, GRAPH_H);
     let ds = rt_graph::TestDataGenerator::new();
     let s = rt_graph::Store::new(ds.get_num_values().unwrap() as u8);
     let ws = Rc::new(WindowState {
@@ -302,4 +280,21 @@ fn copy_patch(
                          x as f64,
                          y as f64);
     c.fill();
+}
+
+fn create_backing_surface(win: &gdk::Window, w: u32, h: u32) -> cairo::Surface {
+    let surface =
+        win.create_similar_image_surface(
+            cairo::Format::Rgb24.into(),
+            w as i32 /* width */,
+            h as i32 /* height */,
+            1 /* scale */).unwrap();
+    {
+        // Clear backing_surface
+        let c = cairo::Context::new(&surface);
+        c.set_source_rgb(0.4, 0.4, 0.4);
+        c.rectangle(0.0, 0.0, w as f64, h as f64);
+        c.fill();
+    }
+    surface
 }
