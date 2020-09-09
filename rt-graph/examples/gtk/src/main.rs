@@ -171,49 +171,51 @@ fn tick(ws: &WindowState) {
         ws.store.borrow_mut().discard(0, t_latest - window_base_dt).unwrap();
     }
 
-    // Draw the new data.
+    if new_data.len() > 0 {
+        // Draw the new data.
 
-    // Calculate the size of the latest patch to render.
-    // TODO: Handle when patch_dims.0 > GRAPH_W.
-    let patch_dims =
-        (((t_latest - ws.last_t_drawn.get()) as f32 / ws.zoom_x.get()).floor() as usize,
-         GRAPH_H as usize);
-    // If there is more than a pixel's worth of data to render since we last drew,
-    // then draw it.
-    if patch_dims.0 >= 1 {
-        let mut patch_bytes = vec![0u8; patch_dims.0 * patch_dims.1 * BYTES_PER_PIXEL];
-        let new_t = ws.last_t_drawn.get() + (patch_dims.0 as f32 * ws.zoom_x.get()) as u32;
-        let cols = ws.data_source.borrow().get_colors().unwrap();
-        render_patch(&ws.store.borrow(), &cols, &mut patch_bytes,
-                     patch_dims.0, patch_dims.1,
-                     ws.last_t_drawn.get(), new_t,
-                     0, std::u16::MAX).unwrap();
+        // Calculate the size of the latest patch to render.
+        // TODO: Handle when patch_dims.0 > GRAPH_W.
+        let patch_dims =
+            (((t_latest - ws.last_t_drawn.get()) as f32 / ws.zoom_x.get()).floor() as usize,
+             GRAPH_H as usize);
+        // If there is more than a pixel's worth of data to render since we last drew,
+        // then draw it.
+        if patch_dims.0 >= 1 {
+            let mut patch_bytes = vec![0u8; patch_dims.0 * patch_dims.1 * BYTES_PER_PIXEL];
+            let new_t = ws.last_t_drawn.get() + (patch_dims.0 as f32 * ws.zoom_x.get()) as u32;
+            let cols = ws.data_source.borrow().get_colors().unwrap();
+            render_patch(&ws.store.borrow(), &cols, &mut patch_bytes,
+                         patch_dims.0, patch_dims.1,
+                         ws.last_t_drawn.get(), new_t,
+                         0, std::u16::MAX).unwrap();
 
-        let patch_offset_x = GRAPH_W - (patch_dims.0 as u32);
+            let patch_offset_x = GRAPH_W - (patch_dims.0 as u32);
 
-        // Copy existing graph to the temp surface, offsetting it to the left.
-        {
-            let c = cairo::Context::new(&*ws.temp_surface.borrow());
-            c.set_source_surface(&*ws.backing_surface.borrow(),
-                                 -(patch_dims.0 as f64) /* x offset*/, 0.0 /* y offset */);
-            c.rectangle(0.0, // x offset
-                        0.0, // y offset
-                        patch_offset_x as f64, // width
-                        GRAPH_H as f64); // height
-            c.fill();
+            // Copy existing graph to the temp surface, offsetting it to the left.
+            {
+                let c = cairo::Context::new(&*ws.temp_surface.borrow());
+                c.set_source_surface(&*ws.backing_surface.borrow(),
+                                     -(patch_dims.0 as f64) /* x offset*/, 0.0 /* y offset */);
+                c.rectangle(0.0, // x offset
+                            0.0, // y offset
+                            patch_offset_x as f64, // width
+                            GRAPH_H as f64); // height
+                c.fill();
+            }
+            copy_patch(&ws.temp_surface.borrow(), patch_bytes,
+                       patch_dims.0 /* w */, patch_dims.1 /* h */,
+                       patch_offset_x as usize /* x */, 0 /* y */);
+
+            // Present new graph by swapping the surfaces.
+            ws.backing_surface.swap(&ws.temp_surface);
+
+            ws.last_t_drawn.set(new_t);
         }
-        copy_patch(&ws.temp_surface.borrow(), patch_bytes,
-                   patch_dims.0 /* w */, patch_dims.1 /* h */,
-                   patch_offset_x as usize /* x */, 0 /* y */);
 
-        // Present new graph by swapping the surfaces.
-        ws.backing_surface.swap(&ws.temp_surface);
-
-        ws.last_t_drawn.set(new_t);
+        // Invalidate the graph widget so we get a draw request.
+        ws.graph_drawing_area.queue_draw();
     }
-
-    // Invalidate the graph widget so we get a draw request.
-    ws.graph_drawing_area.queue_draw();
 }
 
 fn render_patch(
