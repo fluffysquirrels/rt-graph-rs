@@ -393,7 +393,7 @@ fn render_patch(
 
     trace!("render_patch: pbw={}", pbw);
     assert!(pbw >= 1);
-    let points = store.query(t0, t1).unwrap();
+    let points = store.query_range(t0, t1).unwrap();
     for p in points {
         assert!(p.t >= t0 && p.t <= t1);
 

@@ -13,7 +13,7 @@ fn render_patch(store: &Store, cols: &[Color],
 
     trace!("render_patch: pbw={}", pbw);
     assert!(pbw >= 1);
-    let points = store.query(t0, t1)?;
+    let points = store.query_range(t0, t1)?;
     for p in points {
         assert!(p.t >= t0 && p.t <= t1);
 

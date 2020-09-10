@@ -39,12 +39,21 @@ impl Store {
         Ok(())
     }
 
-    pub fn query(&self, t0: u32, t1: u32) -> Result<Vec<Point>> {
+    /// Returns a Vec of the points with t >= t0, < t1.
+    pub fn query_range(&self, t0: u32, t1: u32) -> Result<Vec<Point>> {
         let rv: Vec<Point> =
             self.all.range(t0..t1)
                 .map(|(t,vs)| Point { t: *t, vs: vs.clone() })
                 .collect();
         trace!("query t0={} t1={} rv.len={}", t0, t1, rv.len());
+        Ok(rv)
+    }
+
+    /// Returns the first point with t >= given t.
+    pub fn query_point(&self, t: u32) -> Result<Option<Point>> {
+        let rv = self.all.range(t..)
+                     .map(|(t,vs)| Point { t: *t, vs: vs.clone() })
+                     .next();
         Ok(rv)
     }
 
