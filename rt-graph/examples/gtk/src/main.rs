@@ -331,7 +331,8 @@ fn tick(ws: &WindowState) {
         ws.scrollbar.set_value(t_latest as f64);
     }
 
-    if new_data.len() > 0 {
+    // TODO: Handle drawing when view.mode == ViewMode::Scrolled
+    if new_data.len() > 0 && view.mode == ViewMode::Following {
         // Draw the new data.
 
         // Calculate the size of the latest patch to render.
