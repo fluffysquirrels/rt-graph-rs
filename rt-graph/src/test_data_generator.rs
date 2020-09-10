@@ -28,7 +28,7 @@ impl DataSource for TestDataGenerator {
             rv.push(Point {
                 t,
                 vs: vec![trig_sample(1.0, 1.0/10000.0, 0.0, t),
-                         trig_sample(1.0, 1.0/10000.0, std::f32::consts::PI / 3.0, t),
+                         ((100000.0 / (t as f64)) * trig_sample(1.0, 1.0/10000.0, std::f32::consts::PI / 3.0, t) as f64) as u16,
                          trig_sample(0.5, 1.0/5000.0,  0.0, t)],
             });
 
