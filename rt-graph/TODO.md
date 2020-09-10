@@ -1,11 +1,7 @@
 # TODO
 
 ## Bugs
-* Scrolling overdraws weird stuff sometimes
-* Flickering when scrolling
 * Continue to draw when scrolled and new data is on screen
-* Sometimes crashes when zoomed in far and scrolling "thread 'main' panicked at 'called `Result::unwrap()` on an `Err` value: InvalidSize', examples/gtk/src/main.rs:420:25
-" on `copy_patch` call to `cairo::ImageSurface::create_for_data`
 
 ## Features
 * Pause button
