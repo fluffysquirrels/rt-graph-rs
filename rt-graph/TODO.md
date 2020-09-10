@@ -18,4 +18,3 @@
   * Leave it up to controls at a higher level how to navigate, each graph just has show methods.
   * One graph is just the n=1 case
 * `brew install gtk+3` to install dependencies on OS X
-* Delete iced submodule.
