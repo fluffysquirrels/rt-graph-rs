@@ -3,7 +3,6 @@
 ## Bugs
 * Scrolling overdraws weird stuff sometimes
 * Zoom x out should show disabled when we're at furthest zoom out level
-* Zoom in/out should reset the scroll bar page size, increments
 * Flickering when scrolling
 * Continue to draw when scrolled and new data is on screen
 

@@ -195,16 +195,28 @@ fn build_ui(application: &gtk::Application) {
             let mut view = wsc.view.borrow_mut();
             view.zoom_x = view.zoom_x / 2.0;
         }
+        let zoom_x = wsc.view.borrow().zoom_x;
+        let adj = wsc.scrollbar.get_adjustment();
+        adj.set_step_increment((GRAPH_W as f64) * zoom_x / 4.0);
+        adj.set_page_increment((GRAPH_W as f64) * zoom_x / 2.0);
+        adj.set_page_size((GRAPH_W as f64) * zoom_x);
+
         redraw_graph(&*wsc);
     });
 
     let wsc = ws.clone();
     btn_zoom_x_out.connect_clicked(move |_btn| {
-                {
+        {
             // Scope the mutable borrow of view.
             let mut view = wsc.view.borrow_mut();
             view.zoom_x = (view.zoom_x * 2.0).min(BASE_ZOOM_X);
         }
+        let zoom_x = wsc.view.borrow().zoom_x;
+        let adj = wsc.scrollbar.get_adjustment();
+        adj.set_step_increment((GRAPH_W as f64) * zoom_x / 4.0);
+        adj.set_page_increment((GRAPH_W as f64) * zoom_x / 2.0);
+        adj.set_page_size((GRAPH_W as f64) * zoom_x);
+
         redraw_graph(&*wsc);
     });
 
