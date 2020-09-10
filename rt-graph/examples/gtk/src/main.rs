@@ -28,6 +28,7 @@ struct WindowState {
 
     graph_drawing_area: gtk::DrawingArea,
     scrollbar: gtk::Scrollbar,
+    btn_zoom_x_out: gtk::Button,
 
     view: RefCell<View>,
 
@@ -128,6 +129,7 @@ fn build_ui(application: &gtk::Application) {
 
     let btn_zoom_x_out = gtk::ButtonBuilder::new()
         .label("Zoom X out")
+        .sensitive(false)
         .build();
     buttons_box.add(&btn_zoom_x_out);
 
@@ -152,6 +154,7 @@ fn build_ui(application: &gtk::Application) {
 
         graph_drawing_area: graph.clone(),
         scrollbar: scroll.clone(),
+        btn_zoom_x_out: btn_zoom_x_out.clone(),
 
         view: RefCell::new(View::default()),
 
@@ -201,6 +204,8 @@ fn build_ui(application: &gtk::Application) {
         adj.set_page_increment((GRAPH_W as f64) * zoom_x / 2.0);
         adj.set_page_size((GRAPH_W as f64) * zoom_x);
 
+        wsc.btn_zoom_x_out.set_sensitive(zoom_x < BASE_ZOOM_X);
+
         redraw_graph(&*wsc);
     });
 
@@ -216,6 +221,8 @@ fn build_ui(application: &gtk::Application) {
         adj.set_step_increment((GRAPH_W as f64) * zoom_x / 4.0);
         adj.set_page_increment((GRAPH_W as f64) * zoom_x / 2.0);
         adj.set_page_size((GRAPH_W as f64) * zoom_x);
+
+        wsc.btn_zoom_x_out.set_sensitive(zoom_x < BASE_ZOOM_X);
 
         redraw_graph(&*wsc);
     });
