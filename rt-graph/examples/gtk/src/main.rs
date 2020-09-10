@@ -37,6 +37,7 @@ struct WindowState {
 
 #[derive(Debug)]
 struct View {
+    /// t per pixel
     zoom_x: f64,
     last_t: u32,
     last_x: u32,
@@ -270,9 +271,8 @@ fn redraw_graph(ws: &WindowState) {
     let cols = ws.data_source.borrow().get_colors().unwrap();
     let t1: u32 = view.last_t;
     let t0: u32 = (t1 as i64 - (GRAPH_W as f64 * view.zoom_x) as i64).max(0) as u32;
-    // TODO: Could optimise this by allocating and rendering only the area we know
-    // contains data.
-    let patch_dims = (GRAPH_W as usize, GRAPH_H as usize);
+    let patch_dims = ((((t1-t0) as f64 / (view.zoom_x as f64)) as u32).min(GRAPH_W) as usize,
+                      GRAPH_H as usize);
     let mut patch_bytes = vec![0u8; patch_dims.0 * patch_dims.1 * BYTES_PER_PIXEL];
     render_patch(&*ws.store.borrow(), &cols, &mut patch_bytes,
                  patch_dims.0, patch_dims.1,
@@ -295,14 +295,17 @@ fn tick(ws: &WindowState) {
 
     // Discard old data if there is any
     let window_base_dt = (GRAPH_W as f64 * BASE_ZOOM_X) as u32;
-    if t_latest >= 2 * window_base_dt {
-        ws.store.borrow_mut().discard(0, t_latest - window_base_dt).unwrap();
+    let keep_window = 2 * window_base_dt;
+    let discard_start = if t_latest >= keep_window { t_latest - keep_window } else { 0 };
+    if discard_start > 0 {
+        ws.store.borrow_mut().discard(0, discard_start).unwrap();
     }
 
     let mut view = ws.view.borrow_mut();
 
     // Update scroll bar.
     ws.scrollbar.get_adjustment().set_upper(t_latest as f64);
+    ws.scrollbar.get_adjustment().set_lower(discard_start as f64);
     if view.mode == ViewMode::Following {
         ws.scrollbar.set_value(t_latest as f64);
     }
