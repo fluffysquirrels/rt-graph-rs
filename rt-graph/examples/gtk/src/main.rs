@@ -242,7 +242,7 @@ fn scroll_change(ctrl: &gtk::Scrollbar, new_val: f64, ws: &WindowState) -> Inhib
         };
         view.last_t = (new_val as u32 + ((view.zoom_x * GRAPH_W as f64) as u32))
         .min(ws.store.borrow().last_t());
-        view.last_x = 0; // Dunno.
+        view.last_x = 0;
 
         debug!("scroll_change, v={:?} view={:?}", new_val, view);
     }
@@ -275,6 +275,7 @@ fn graph_draw(_ctrl: &gtk::DrawingArea, ctx: &cairo::Context, ws: &WindowState) 
 
 /// Redraw the whole graph to the backing store
 fn redraw_graph(ws: &WindowState) {
+    trace!("redraw_graph");
     let backing_surface = ws.backing_surface.borrow();
     {
         // Clear backing_surface
@@ -286,7 +287,7 @@ fn redraw_graph(ws: &WindowState) {
         c.fill();
     }
 
-    let view = ws.view.borrow();
+    let mut view = ws.view.borrow_mut();
     let cols = ws.data_source.borrow().get_colors().unwrap();
     let t1: u32 = view.last_t;
     let t0: u32 = (t1 as i64 - (GRAPH_W as f64 * view.zoom_x) as i64).max(0) as u32;
@@ -301,6 +302,7 @@ fn redraw_graph(ws: &WindowState) {
         copy_patch(&*backing_surface, patch_bytes,
                    patch_dims.0, patch_dims.1,
                    0 /* x */, 0 /* y */);
+        view.last_x = patch_dims.0 as u32;
     }
     ws.graph_drawing_area.queue_draw();
 }
@@ -331,8 +333,7 @@ fn tick(ws: &WindowState) {
         ws.scrollbar.set_value(t_latest as f64);
     }
 
-    // TODO: Handle drawing when view.mode == ViewMode::Scrolled
-    if new_data.len() > 0 && view.mode == ViewMode::Following {
+    if new_data.len() > 0 {
         // Draw the new data.
 
         // Calculate the size of the latest patch to render.
@@ -376,7 +377,7 @@ fn tick(ws: &WindowState) {
                        patch_offset_x as usize /* x */, 0 /* y */);
 
             view.last_t = new_t;
-            view.last_x = (patch_offset_x + patch_dims.0 as u32).max(GRAPH_W);
+            view.last_x = (patch_offset_x + patch_dims.0 as u32).min(GRAPH_W);
         }
 
         // Invalidate the graph widget so we get a draw request.
@@ -426,6 +427,9 @@ fn copy_patch(
     bytes: Vec<u8>,
     w: usize, h: usize,
     x: usize, y: usize) {
+
+    trace!("copy_patch w={} x={}", w, x);
+
     // Create an ImageSurface from our bytes
     let patch_surface = cairo::ImageSurface::create_for_data(
         bytes,

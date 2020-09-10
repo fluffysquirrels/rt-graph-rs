@@ -1,7 +1,6 @@
 # TODO
 
 ## Bugs
-* Continue to draw when scrolled and new data is on screen
 
 ## Features
 * Pause button
