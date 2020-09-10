@@ -292,14 +292,16 @@ fn redraw_graph(ws: &WindowState) {
     let t0: u32 = (t1 as i64 - (GRAPH_W as f64 * view.zoom_x) as i64).max(0) as u32;
     let patch_dims = ((((t1-t0) as f64 / (view.zoom_x as f64)) as u32).min(GRAPH_W) as usize,
                       GRAPH_H as usize);
-    let mut patch_bytes = vec![0u8; patch_dims.0 * patch_dims.1 * BYTES_PER_PIXEL];
-    render_patch(&*ws.store.borrow(), &cols, &mut patch_bytes,
-                 patch_dims.0, patch_dims.1,
-                 t0, t1,
-                 0, std::u16::MAX). unwrap();
-    copy_patch(&*backing_surface, patch_bytes,
-               patch_dims.0, patch_dims.1,
-               0 /* x */, 0 /* y */);
+    if patch_dims.0 > 0 {
+        let mut patch_bytes = vec![0u8; patch_dims.0 * patch_dims.1 * BYTES_PER_PIXEL];
+        render_patch(&*ws.store.borrow(), &cols, &mut patch_bytes,
+                     patch_dims.0, patch_dims.1,
+                     t0, t1,
+                     0, std::u16::MAX). unwrap();
+        copy_patch(&*backing_surface, patch_bytes,
+                   patch_dims.0, patch_dims.1,
+                   0 /* x */, 0 /* y */);
+    }
     ws.graph_drawing_area.queue_draw();
 }
 
@@ -340,7 +342,7 @@ fn tick(ws: &WindowState) {
              GRAPH_H as usize);
         // If there is more than a pixel's worth of data to render since we last drew,
         // then draw it.
-        if patch_dims.0 >= 1 {
+        if patch_dims.0 > 0 {
             let mut patch_bytes = vec![0u8; patch_dims.0 * patch_dims.1 * BYTES_PER_PIXEL];
             let new_t = view.last_t + (patch_dims.0 as f64 * view.zoom_x) as u32;
             let cols = ws.data_source.borrow().get_colors().unwrap();
