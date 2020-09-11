@@ -193,42 +193,35 @@ fn build_ui(application: &gtk::Application) {
 
     let wsc = ws.clone();
     btn_zoom_x_in.connect_clicked(move |_btn| {
-        {
-            // Scope the mutable borrow of view.
-            let mut view = wsc.view.borrow_mut();
-            view.zoom_x = view.zoom_x / 2.0;
-        }
-        let zoom_x = wsc.view.borrow().zoom_x;
-        let adj = wsc.scrollbar.get_adjustment();
-        adj.set_step_increment((GRAPH_W as f64) * zoom_x / 4.0);
-        adj.set_page_increment((GRAPH_W as f64) * zoom_x / 2.0);
-        adj.set_page_size((GRAPH_W as f64) * zoom_x);
-
-        wsc.btn_zoom_x_out.set_sensitive(zoom_x < BASE_ZOOM_X);
-
-        redraw_graph(&*wsc);
+        let new = wsc.view.borrow().zoom_x / 2.0;
+        zoom_x(&*wsc, new);
     });
 
     let wsc = ws.clone();
     btn_zoom_x_out.connect_clicked(move |_btn| {
-        {
-            // Scope the mutable borrow of view.
-            let mut view = wsc.view.borrow_mut();
-            view.zoom_x = (view.zoom_x * 2.0).min(BASE_ZOOM_X);
-        }
-        let zoom_x = wsc.view.borrow().zoom_x;
-        let adj = wsc.scrollbar.get_adjustment();
-        adj.set_step_increment((GRAPH_W as f64) * zoom_x / 4.0);
-        adj.set_page_increment((GRAPH_W as f64) * zoom_x / 2.0);
-        adj.set_page_size((GRAPH_W as f64) * zoom_x);
-
-        wsc.btn_zoom_x_out.set_sensitive(zoom_x < BASE_ZOOM_X);
-
-        redraw_graph(&*wsc);
+        let new = wsc.view.borrow().zoom_x * 2.0;
+        zoom_x(&*wsc, new);
     });
 
     // Show everything recursively
     window.show_all();
+}
+
+fn zoom_x(ws: &WindowState, new_zoom_x: f64) {
+    let new_zoom_x = new_zoom_x.min(BASE_ZOOM_X);
+    {
+        // Scope the mutable borrow of view.
+        let mut view = ws.view.borrow_mut();
+        view.zoom_x = new_zoom_x;
+    }
+    let adj = ws.scrollbar.get_adjustment();
+    adj.set_step_increment((GRAPH_W as f64) * new_zoom_x / 4.0);
+    adj.set_page_increment((GRAPH_W as f64) * new_zoom_x / 2.0);
+    adj.set_page_size((GRAPH_W as f64) * new_zoom_x);
+
+    ws.btn_zoom_x_out.set_sensitive(new_zoom_x < BASE_ZOOM_X);
+
+    redraw_graph(&*ws);
 }
 
 fn scroll_change(ctrl: &gtk::Scrollbar, new_val: f64, ws: &WindowState) -> Inhibit {
