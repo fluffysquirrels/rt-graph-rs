@@ -5,7 +5,7 @@ use gdk::prelude::*;
 use gio::prelude::*;
 use glib::source::Continue;
 use gtk::prelude::*;
-use rt_graph::DataSource;
+use rt_graph::{DataSource, Point};
 use std::{
     cell::{Cell, RefCell},
     env::args,
@@ -34,6 +34,8 @@ struct WindowState {
 
     fps_count: Cell<u16>,
     fps_timer: Cell<Instant>,
+
+    windows_to_store: u32,
 }
 
 #[derive(Debug)]
@@ -160,6 +162,8 @@ fn build_ui(application: &gtk::Application) {
 
         fps_count: Cell::new(0),
         fps_timer: Cell::new(Instant::now()),
+
+        windows_to_store: 100,
     });
 
     // Set signal handlers that require WindowState
@@ -167,6 +171,17 @@ fn build_ui(application: &gtk::Application) {
     graph.connect_draw(move |ctrl, ctx| {
         graph_draw(ctrl, ctx, &*wsc)
     });
+
+    let wsc = ws.clone();
+    graph.add_events(gdk::EventMask::BUTTON_PRESS_MASK);
+    graph.connect_button_press_event(move |_ctrl, ev| {
+        graph_click(&*wsc, ev)
+    });
+    // graph.add_events(gdk::EventMask::POINTER_MOTION_MASK);
+    // graph.connect_motion_notify_event(move |ctrl, ev| {
+    //     debug!("graph_mouse_move ev.pos={:?}", ev.get_position());
+    //     Inhibit(false)
+    // });
 
     let wsc = ws.clone();
     let _tick_id = glib::source::timeout_add_local(16 /* ms */, move || {
@@ -194,20 +209,40 @@ fn build_ui(application: &gtk::Application) {
     let wsc = ws.clone();
     btn_zoom_x_in.connect_clicked(move |_btn| {
         let new = wsc.view.borrow().zoom_x / 2.0;
-        zoom_x(&*wsc, new);
+        set_zoom_x(&*wsc, new);
     });
 
     let wsc = ws.clone();
     btn_zoom_x_out.connect_clicked(move |_btn| {
         let new = wsc.view.borrow().zoom_x * 2.0;
-        zoom_x(&*wsc, new);
+        set_zoom_x(&*wsc, new);
     });
 
     // Show everything recursively
     window.show_all();
 }
 
-fn zoom_x(ws: &WindowState, new_zoom_x: f64) {
+fn graph_click(ws: &WindowState, ev: &gdk::EventButton) -> Inhibit {
+    let pos = ev.get_position();
+    let view = ws.view.borrow();
+    let t = (view.last_t as i64 +
+             ((pos.0 - (view.last_x as f64)) * view.zoom_x) as i64)
+             .max(0).min(view.last_t as i64)
+        as u32;
+    let pt = ws.store.borrow().query_point(t).unwrap();
+    // If we are getting a point >= 10 pixels away, return None instead.
+    let pt: Option<Point> = if (pt.as_ref().unwrap().t - t) >= (view.zoom_x * 10.0) as u32 {
+        None
+    } else {
+        pt
+    };
+    debug!("graph_button_press pos={:?} last_t={} last_x={}", pos, view.last_t, view.last_x);
+    debug!("graph_button_press t={} pt={:?}", t, pt);
+
+    Inhibit(false)
+}
+
+fn set_zoom_x(ws: &WindowState, new_zoom_x: f64) {
     let new_zoom_x = new_zoom_x.min(BASE_ZOOM_X);
     {
         // Scope the mutable borrow of view.
@@ -311,7 +346,7 @@ fn tick(ws: &WindowState) {
 
     // Discard old data if there is any
     let window_base_dt = (GRAPH_W as f64 * BASE_ZOOM_X) as u32;
-    let keep_window = 2 * window_base_dt;
+    let keep_window = ws.windows_to_store * window_base_dt;
     let discard_start = if t_latest >= keep_window { t_latest - keep_window } else { 0 };
     if discard_start > 0 {
         ws.store.borrow_mut().discard(0, discard_start).unwrap();
@@ -326,7 +361,8 @@ fn tick(ws: &WindowState) {
         ws.scrollbar.set_value(t_latest as f64);
     }
 
-    if new_data.len() > 0 {
+    if new_data.len() > 0 && (view.mode == ViewMode::Following ||
+                              (view.mode == ViewMode::Scrolled && view.last_x < GRAPH_W)) {
         // Draw the new data.
 
         // Calculate the size of the latest patch to render.
