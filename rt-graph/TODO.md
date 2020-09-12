@@ -3,10 +3,8 @@
 ## Bugs
 * Disable "Follow" button when following.
 * Crashes when you zoom in too far.
-* Probably shows garbage data when you click to see values after they've been discarded.
 
 ## Features
-* Mouse over / click to see raw values
 * Configure how much old data is stored
 * Daniel has 5 graphs, wants them all in sync.
   * Leave it up to controls at a higher level how to navigate, each graph just has show methods.
