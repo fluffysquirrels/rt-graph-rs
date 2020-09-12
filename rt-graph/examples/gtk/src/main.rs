@@ -26,6 +26,8 @@ struct WindowState {
     data_source: RefCell<Box<dyn rt_graph::DataSource>>,
     store: RefCell<rt_graph::Store>,
 
+    _window: gtk::ApplicationWindow,
+    win_box: gtk::Box,
     graph_drawing_area: gtk::DrawingArea,
     scrollbar: gtk::Scrollbar,
     btn_zoom_x_out: gtk::Button,
@@ -154,6 +156,8 @@ fn build_ui(application: &gtk::Application) {
         store: RefCell::new(s),
         data_source: RefCell::new(Box::new(ds)),
 
+        _window: window.clone(),
+        win_box: win_box.clone(),
         graph_drawing_area: graph.clone(),
         scrollbar: scroll.clone(),
         btn_zoom_x_out: btn_zoom_x_out.clone(),
@@ -230,7 +234,9 @@ fn graph_click(ws: &WindowState, ev: &gdk::EventButton) -> Inhibit {
              .max(0).min(view.last_t as i64)
         as u32;
     let pt = ws.store.borrow().query_point(t).unwrap();
+
     // If we are getting a point >= 10 pixels away, return None instead.
+    // This can happen when old data has been discarded but is still on screen.
     let pt: Option<Point> = if (pt.as_ref().unwrap().t - t) >= (view.zoom_x * 10.0) as u32 {
         None
     } else {
@@ -238,6 +244,32 @@ fn graph_click(ws: &WindowState, ev: &gdk::EventButton) -> Inhibit {
     };
     debug!("graph_button_press pos={:?} last_t={} last_x={}", pos, view.last_t, view.last_x);
     debug!("graph_button_press t={} pt={:?}", t, pt);
+
+    if let Some(pta) = pt {
+        let ib = gtk::InfoBarBuilder::new()
+            .build();
+        ws.win_box.add(&ib);
+        ib.get_content_area().add(&gtk::Label::new(Some("t, vs")));
+
+        let ibe = gtk::EntryBuilder::new()
+            .text(&*format!("{}, {:?}", pta.t, pta.vals()))
+            .editable(false)
+            .hexpand(true)
+            .build();
+        ib.get_content_area().add(&ibe);
+
+        let close_btn = gtk::ButtonBuilder::new()
+            .label("Close")
+            .build();
+        let ibc = ib.clone();
+        let wbc = ws.win_box.clone();
+        close_btn.connect_clicked(move |_btn| {
+            wbc.remove(&ibc);
+        });
+        ib.get_action_area().unwrap().add(&close_btn);
+
+        ib.show_all();
+    }
 
     Inhibit(false)
 }
