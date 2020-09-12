@@ -246,29 +246,30 @@ fn graph_click(ws: &WindowState, ev: &gdk::EventButton) -> Inhibit {
     debug!("graph_button_press t={} pt={:?}", t, pt);
 
     if let Some(pta) = pt {
-        let ib = gtk::InfoBarBuilder::new()
+        let info_bar = gtk::InfoBarBuilder::new()
             .build();
-        ws.win_box.add(&ib);
-        ib.get_content_area().add(&gtk::Label::new(Some("t, vs")));
+        ws.win_box.add(&info_bar);
+        info_bar.get_content_area().add(&gtk::Label::new(Some("t, vs:")));
 
-        let ibe = gtk::EntryBuilder::new()
+        let entry = gtk::EntryBuilder::new()
             .text(&*format!("{}, {:?}", pta.t, pta.vals()))
             .editable(false)
             .hexpand(true)
             .build();
-        ib.get_content_area().add(&ibe);
+        info_bar.get_content_area().add(&entry);
 
         let close_btn = gtk::ButtonBuilder::new()
             .label("Close")
             .build();
-        let ibc = ib.clone();
+        info_bar.get_action_area().unwrap().add(&close_btn);
+
+        let ibc = info_bar.clone();
         let wbc = ws.win_box.clone();
         close_btn.connect_clicked(move |_btn| {
             wbc.remove(&ibc);
         });
-        ib.get_action_area().unwrap().add(&close_btn);
 
-        ib.show_all();
+        info_bar.show_all();
     }
 
     Inhibit(false)
