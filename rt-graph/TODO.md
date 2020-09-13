@@ -8,7 +8,7 @@
 * Making the window wider should keep the scrollbar as the same width as the graph.
 
 ## Features
-* Configure how much old data is stored
+* Event listeners on Graph
 * Daniel has 5 graphs, wants them all in sync.
   * Leave it up to controls at a higher level how to navigate, each graph just has show methods.
   * One graph is just the n=1 case
@@ -26,6 +26,9 @@
   See:
   https://developer.gnome.org/gtk3/stable/GtkWidget.html#gtk-widget-get-frame-clock ,
   https://developer.gnome.org/gtk3/stable/GtkWidget.html#gtk-widget-add-tick-callback
+* Add links to the GTK docs
+  https://developer.gnome.org/gtk3/stable/index.html
+  https://gtk-rs.org/docs-src/
 
 ## Notes
 
