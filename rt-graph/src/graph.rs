@@ -8,10 +8,6 @@ use std::{
     time::Instant,
 };
 
-const GRAPH_W: u32 = 800;
-const GRAPH_H: u32 = 200;
-
-const BASE_ZOOM_X: f64 = 1000.0;
 const BYTES_PER_PIXEL: usize = 4;
 const BACKGROUND_COLOR: (f64, f64, f64) = (0.4, 0.4, 0.4);
 
@@ -19,7 +15,6 @@ struct WindowState {
     backing_surface: RefCell<cairo::Surface>,
     temp_surface: RefCell<cairo::Surface>,
 
-    data_source: RefCell<Box<dyn DataSource>>,
     store: RefCell<Store>,
 
     win_box: gtk::Box,
@@ -32,7 +27,7 @@ struct WindowState {
     fps_count: Cell<u16>,
     fps_timer: Cell<Instant>,
 
-    windows_to_store: u32,
+    config: Config,
 }
 
 #[derive(Debug)]
@@ -51,9 +46,9 @@ enum ViewMode {
 }
 
 impl View {
-    fn default() -> View {
+    fn default_from_config(c: &Config) -> View {
         View {
-            zoom_x: BASE_ZOOM_X,
+            zoom_x: c.base_zoom_x,
             last_t: 0,
             last_x: 0,
             mode: ViewMode::Following,
@@ -64,13 +59,26 @@ impl View {
 #[derive(Builder, Debug)]
 #[builder(pattern = "owned")]
 pub struct Config {
+    /// Maximum zoom out, in units of t per x pixel
+    #[builder(default = "1000.0")]
+    base_zoom_x: f64,
+
+    #[builder(default = "800")]
+    graph_width: u32,
+
+    #[builder(default = "200")]
+    graph_height: u32,
+
     #[builder(private, setter(name = "data_source_internal"))]
-    data_source: Box<dyn DataSource>,
+    data_source: RefCell<Box<dyn DataSource>>,
+
+    #[builder(default = "100")]
+    windows_to_store: u32,
 }
 
 impl ConfigBuilder {
     pub fn data_source<T: DataSource + 'static>(self, ds: T) -> Self {
-        self.data_source_internal(Box::new(ds))
+        self.data_source_internal(RefCell::new(Box::new(ds)))
     }
 }
 
@@ -82,7 +90,7 @@ impl Graph {
     pub fn build_ui<C>(config: Config, container: &C)
         where C: IsA<gtk::Container> + IsA<gtk::Widget>
     {
-        let view = View::default();
+        let view = View::default_from_config(&config);
 
         let win_box = gtk::BoxBuilder::new()
             .orientation(gtk::Orientation::Vertical)
@@ -91,8 +99,8 @@ impl Graph {
         container.add(&win_box);
 
         let graph = gtk::DrawingAreaBuilder::new()
-            .height_request(GRAPH_H as i32)
-            .width_request(GRAPH_W as i32)
+            .height_request(config.graph_height as i32)
+            .width_request(config.graph_width as i32)
             .build();
         win_box.add(&graph);
 
@@ -102,9 +110,9 @@ impl Graph {
                 0.0,                                  // value
                 0.0,                                  // lower
                 0.0,                                  // upper
-                (GRAPH_W as f64) * view.zoom_x / 4.0, // step_increment
-                (GRAPH_W as f64) * view.zoom_x / 2.0, // page_increment
-                (GRAPH_W as f64) * view.zoom_x))      // page_size
+                (config.graph_width as f64) * view.zoom_x / 4.0, // step_increment
+                (config.graph_width as f64) * view.zoom_x / 2.0, // page_increment
+                (config.graph_width as f64) * view.zoom_x))      // page_size
             .build();
         win_box.add(&scroll);
 
@@ -140,9 +148,9 @@ impl Graph {
         container.show();
 
         let backing_surface = create_backing_surface(&container.get_window().unwrap(),
-                                                     GRAPH_W, GRAPH_H);
+                                                     config.graph_width, config.graph_height);
         let temp_surface = create_backing_surface(&container.get_window().unwrap(),
-                                                  GRAPH_W, GRAPH_H);
+                                                  config.graph_width, config.graph_height);
         let ds = TestDataGenerator::new();
         let s = Store::new(ds.get_num_values().unwrap() as u8);
         let ws = Rc::new(WindowState {
@@ -150,7 +158,6 @@ impl Graph {
             temp_surface: RefCell::new(temp_surface),
 
             store: RefCell::new(s),
-            data_source: RefCell::new(config.data_source),
 
             win_box: win_box.clone(),
             graph_drawing_area: graph.clone(),
@@ -162,7 +169,7 @@ impl Graph {
             fps_count: Cell::new(0),
             fps_timer: Cell::new(Instant::now()),
 
-            windows_to_store: 100,
+            config,
         });
 
         // Set signal handlers that require WindowState
@@ -275,18 +282,18 @@ fn graph_click(ws: &WindowState, ev: &gdk::EventButton) -> Inhibit {
 }
 
 fn set_zoom_x(ws: &WindowState, new_zoom_x: f64) {
-    let new_zoom_x = new_zoom_x.min(BASE_ZOOM_X);
+    let new_zoom_x = new_zoom_x.min(ws.config.base_zoom_x);
     {
         // Scope the mutable borrow of view.
         let mut view = ws.view.borrow_mut();
         view.zoom_x = new_zoom_x;
     }
     let adj = ws.scrollbar.get_adjustment();
-    adj.set_step_increment((GRAPH_W as f64) * new_zoom_x / 4.0);
-    adj.set_page_increment((GRAPH_W as f64) * new_zoom_x / 2.0);
-    adj.set_page_size((GRAPH_W as f64) * new_zoom_x);
+    adj.set_step_increment((ws.config.graph_width as f64) * new_zoom_x / 4.0);
+    adj.set_page_increment((ws.config.graph_width as f64) * new_zoom_x / 2.0);
+    adj.set_page_size((ws.config.graph_width as f64) * new_zoom_x);
 
-    ws.btn_zoom_x_out.set_sensitive(new_zoom_x < BASE_ZOOM_X);
+    ws.btn_zoom_x_out.set_sensitive(new_zoom_x < ws.config.base_zoom_x);
 
     redraw_graph(&*ws);
 }
@@ -300,7 +307,7 @@ fn scroll_change(ctrl: &gtk::Scrollbar, new_val: f64, ws: &WindowState) -> Inhib
         } else {
             ViewMode::Scrolled
         };
-        view.last_t = (new_val as u32 + ((view.zoom_x * GRAPH_W as f64) as u32))
+        view.last_t = (new_val as u32 + ((view.zoom_x * ws.config.graph_width as f64) as u32))
         .min(ws.store.borrow().last_t());
         view.last_x = 0;
 
@@ -316,7 +323,7 @@ fn graph_draw(_ctrl: &gtk::DrawingArea, ctx: &cairo::Context, ws: &WindowState) 
     trace!("graph_draw");
 
     // Copy from the backing_surface, which was updated elsewhere
-    ctx.rectangle(0.0, 0.0, GRAPH_W as f64, GRAPH_H as f64);
+    ctx.rectangle(0.0, 0.0, ws.config.graph_width as f64, ws.config.graph_height as f64);
     ctx.set_source_surface(&ws.backing_surface.borrow(),
                            0.0 /* offset x */, 0.0 /* offset y */);
     ctx.fill();
@@ -343,16 +350,16 @@ fn redraw_graph(ws: &WindowState) {
         c.set_source_rgb(BACKGROUND_COLOR.0,
                          BACKGROUND_COLOR.1,
                          BACKGROUND_COLOR.2);
-        c.rectangle(0.0, 0.0, GRAPH_W as f64, GRAPH_H as f64);
+        c.rectangle(0.0, 0.0, ws.config.graph_width as f64, ws.config.graph_height as f64);
         c.fill();
     }
 
     let mut view = ws.view.borrow_mut();
-    let cols = ws.data_source.borrow().get_colors().unwrap();
+    let cols = ws.config.data_source.borrow().get_colors().unwrap();
     let t1: u32 = view.last_t;
-    let t0: u32 = (t1 as i64 - (GRAPH_W as f64 * view.zoom_x) as i64).max(0) as u32;
-    let patch_dims = ((((t1-t0) as f64 / (view.zoom_x as f64)) as u32).min(GRAPH_W) as usize,
-                      GRAPH_H as usize);
+    let t0: u32 = (t1 as i64 - (ws.config.graph_width as f64 * view.zoom_x) as i64).max(0) as u32;
+    let patch_dims = ((((t1-t0) as f64 / (view.zoom_x as f64)) as u32).min(ws.config.graph_width) as usize,
+                      ws.config.graph_height as usize);
     if patch_dims.0 > 0 {
         let mut patch_bytes = vec![0u8; patch_dims.0 * patch_dims.1 * BYTES_PER_PIXEL];
         render_patch(&*ws.store.borrow(), &cols, &mut patch_bytes,
@@ -371,14 +378,14 @@ fn tick(ws: &WindowState) {
     trace!("tick");
 
     // Ingest new data
-    let new_data = ws.data_source.borrow_mut().get_data().unwrap();
+    let new_data = ws.config.data_source.borrow_mut().get_data().unwrap();
     ws.store.borrow_mut().ingest(&*new_data).unwrap();
 
     let t_latest = ws.store.borrow().last_t();
 
     // Discard old data if there is any
-    let window_base_dt = (GRAPH_W as f64 * BASE_ZOOM_X) as u32;
-    let keep_window = ws.windows_to_store * window_base_dt;
+    let window_base_dt = (ws.config.graph_width as f64 * ws.config.base_zoom_x) as u32;
+    let keep_window = ws.config.windows_to_store * window_base_dt;
     let discard_start = if t_latest >= keep_window { t_latest - keep_window } else { 0 };
     if discard_start > 0 {
         ws.store.borrow_mut().discard(0, discard_start).unwrap();
@@ -394,28 +401,28 @@ fn tick(ws: &WindowState) {
     }
 
     if new_data.len() > 0 && (view.mode == ViewMode::Following ||
-                              (view.mode == ViewMode::Scrolled && view.last_x < GRAPH_W)) {
+                              (view.mode == ViewMode::Scrolled && view.last_x < ws.config.graph_width)) {
         // Draw the new data.
 
         // Calculate the size of the latest patch to render.
-        // TODO: Handle when patch_dims.0 >= GRAPH_W.
+        // TODO: Handle when patch_dims.0 >= ws.config.graph_width.
         // TODO: Handle scrolled when new data is offscreen (don't draw)
         let patch_dims =
             (((t_latest - view.last_t) as f64 / view.zoom_x).floor() as usize,
-             GRAPH_H as usize);
+             ws.config.graph_height as usize);
         // If there is more than a pixel's worth of data to render since we last drew,
         // then draw it.
         if patch_dims.0 > 0 {
             let mut patch_bytes = vec![0u8; patch_dims.0 * patch_dims.1 * BYTES_PER_PIXEL];
             let new_t = view.last_t + (patch_dims.0 as f64 * view.zoom_x) as u32;
-            let cols = ws.data_source.borrow().get_colors().unwrap();
+            let cols = ws.config.data_source.borrow().get_colors().unwrap();
             render_patch(&ws.store.borrow(), &cols, &mut patch_bytes,
                          patch_dims.0, patch_dims.1,
                          view.last_t, new_t,
                          0, std::u16::MAX).unwrap();
 
             let patch_offset_x = match view.mode {
-                ViewMode::Following => GRAPH_W - (patch_dims.0 as u32),
+                ViewMode::Following => ws.config.graph_width - (patch_dims.0 as u32),
                 ViewMode::Scrolled => view.last_x,
             };
 
@@ -427,7 +434,7 @@ fn tick(ws: &WindowState) {
                 c.rectangle(0.0, // x offset
                             0.0, // y offset
                             patch_offset_x as f64, // width
-                            GRAPH_H as f64); // height
+                            ws.config.graph_height as f64); // height
                 c.fill();
 
                 // Present new graph by swapping the surfaces.
@@ -438,7 +445,7 @@ fn tick(ws: &WindowState) {
                        patch_offset_x as usize /* x */, 0 /* y */);
 
             view.last_t = new_t;
-            view.last_x = (patch_offset_x + patch_dims.0 as u32).min(GRAPH_W);
+            view.last_x = (patch_offset_x + patch_dims.0 as u32).min(ws.config.graph_width);
         }
 
         // Invalidate the graph widget so we get a draw request.
