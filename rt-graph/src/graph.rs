@@ -83,11 +83,11 @@ impl ConfigBuilder {
 }
 
 pub struct Graph {
-
+    _s: Rc<WindowState>,
 }
 
 impl Graph {
-    pub fn build_ui<C>(config: Config, container: &C)
+    pub fn build_ui<C>(config: Config, container: &C) -> Graph
         where C: IsA<gtk::Container> + IsA<gtk::Widget>
     {
         let view = View::default_from_config(&config);
@@ -229,6 +229,10 @@ impl Graph {
 
         // Show everything recursively
         win_box.show_all();
+
+        Graph {
+            _s: ws.clone(),
+        }
     }
 }
 
