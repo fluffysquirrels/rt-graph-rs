@@ -3,7 +3,7 @@
 
 use gio::prelude::*;
 use gtk::prelude::*;
-use rt_graph::{Config, DataSource, Graph, Point};
+use rt_graph::{Config, ConfigBuilder, DataSource, Graph, Point, TestDataGenerator};
 use std::{
     env::args,
 };
@@ -30,8 +30,11 @@ fn build_ui(application: &gtk::Application) {
         .window_position(gtk::WindowPosition::Center)
         .build();
 
-    let graph_config = Config {};
-    Graph::build_ui(graph_config, &window);
+    let config = ConfigBuilder::default()
+        .data_source(TestDataGenerator::new())
+        .build()
+        .unwrap();
+    Graph::build_ui(config, &window);
 
     window.show_all();
 }

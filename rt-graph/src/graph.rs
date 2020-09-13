@@ -61,8 +61,17 @@ impl View {
     }
 }
 
+#[derive(Builder, Debug)]
+#[builder(pattern = "owned")]
 pub struct Config {
+    #[builder(private, setter(name = "data_source_internal"))]
+    data_source: Box<dyn DataSource>,
+}
 
+impl ConfigBuilder {
+    pub fn data_source<T: DataSource + 'static>(self, ds: T) -> Self {
+        self.data_source_internal(Box::new(ds))
+    }
 }
 
 pub struct Graph {
@@ -70,7 +79,7 @@ pub struct Graph {
 }
 
 impl Graph {
-    pub fn build_ui<C>(_config: Config, container: &C)
+    pub fn build_ui<C>(config: Config, container: &C)
         where C: IsA<gtk::Container> + IsA<gtk::Widget>
     {
         let view = View::default();
@@ -141,7 +150,7 @@ impl Graph {
             temp_surface: RefCell::new(temp_surface),
 
             store: RefCell::new(s),
-            data_source: RefCell::new(Box::new(ds)),
+            data_source: RefCell::new(config.data_source),
 
             win_box: win_box.clone(),
             graph_drawing_area: graph.clone(),
