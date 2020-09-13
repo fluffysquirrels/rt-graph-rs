@@ -8,6 +8,9 @@ extern crate log;
 
 use std::fmt::Debug;
 
+mod graph;
+pub use graph::{Config, Graph};
+
 mod graph_window;
 pub use graph_window::{GraphWindow, GraphWindowBuilder};
 
