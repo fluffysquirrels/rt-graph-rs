@@ -11,6 +11,9 @@ use std::fmt::Debug;
 mod graph_window;
 pub use graph_window::{GraphWindow, GraphWindowBuilder};
 
+mod signal;
+pub use signal::Signal;
+
 mod store;
 pub use store::Store;
 
