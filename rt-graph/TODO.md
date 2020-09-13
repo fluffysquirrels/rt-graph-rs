@@ -3,6 +3,8 @@
 ## Bugs
 * Disable "Follow" button when following.
 * Crashes when you zoom in too far.
+* Follow before screen is filled leaves a background colour-filled
+  hole. (call redraw, redraw handles ViewMode::Following).
 
 ## Features
 * Configure how much old data is stored
@@ -16,6 +18,13 @@
 * Alt left mouse to zoom box
 * Embeddable panel
 * `brew install gtk+3` to install dependencies on OS X
+* Scale and offset data (auto-fill y?)
+* Probably use f32 for point data
+* Use the frame clock or add\_tick\_callback for timing instead of
+  just rendering every 16ms with glib::source::timeout\_add\_local.
+  See:
+  https://developer.gnome.org/gtk3/stable/GtkWidget.html#gtk-widget-get-frame-clock ,
+  https://developer.gnome.org/gtk3/stable/GtkWidget.html#gtk-widget-add-tick-callback
 
 ## Notes
 
