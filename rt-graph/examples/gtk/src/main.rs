@@ -26,7 +26,6 @@ struct WindowState {
     data_source: RefCell<Box<dyn rt_graph::DataSource>>,
     store: RefCell<rt_graph::Store>,
 
-    _window: gtk::ApplicationWindow,
     win_box: gtk::Box,
     graph_drawing_area: gtk::DrawingArea,
     scrollbar: gtk::Scrollbar,
@@ -80,8 +79,6 @@ fn main() {
 }
 
 fn build_ui(application: &gtk::Application) {
-    let view = View::default();
-
     let window = gtk::ApplicationWindowBuilder::new()
         .application(application)
         .title("rt-graph")
@@ -91,11 +88,26 @@ fn build_ui(application: &gtk::Application) {
         .default_height((GRAPH_H + 100) as i32)
         .build();
 
+    let graph_config = Config {};
+    graph_build_ui(graph_config, &window);
+
+    window.show_all();
+}
+
+struct Config {
+
+}
+
+fn graph_build_ui<C>(config: Config, container: &C)
+    where C: IsA<gtk::Container> + IsA<gtk::Widget>
+{
+    let view = View::default();
+
     let win_box = gtk::BoxBuilder::new()
         .orientation(gtk::Orientation::Vertical)
         .spacing(0)
         .build();
-    window.add(&win_box);
+    container.add(&win_box);
 
     let graph = gtk::DrawingAreaBuilder::new()
         .height_request(GRAPH_H as i32)
@@ -139,13 +151,16 @@ fn build_ui(application: &gtk::Application) {
 
     // Initialise WindowState
 
-    // Show window here so we can get an instance of gdk::Window with
+    // Show container here so we can get an instance of gdk::Window with
     // get_window() below, in order to create_similar_image_surface.
-    window.show();
 
-    let backing_surface = create_backing_surface(&window.get_window().unwrap(),
+    // TODO: Showing our parent is rude / unexpected. Also I doubt it'll work for some
+    // detached container.
+    container.show();
+
+    let backing_surface = create_backing_surface(&container.get_window().unwrap(),
                                                  GRAPH_W, GRAPH_H);
-    let temp_surface = create_backing_surface(&window.get_window().unwrap(),
+    let temp_surface = create_backing_surface(&container.get_window().unwrap(),
                                               GRAPH_W, GRAPH_H);
     let ds = rt_graph::TestDataGenerator::new();
     let s = rt_graph::Store::new(ds.get_num_values().unwrap() as u8);
@@ -156,13 +171,12 @@ fn build_ui(application: &gtk::Application) {
         store: RefCell::new(s),
         data_source: RefCell::new(Box::new(ds)),
 
-        _window: window.clone(),
         win_box: win_box.clone(),
         graph_drawing_area: graph.clone(),
         scrollbar: scroll.clone(),
         btn_zoom_x_out: btn_zoom_x_out.clone(),
 
-        view: RefCell::new(View::default()),
+        view: RefCell::new(view),
 
         fps_count: Cell::new(0),
         fps_timer: Cell::new(Instant::now()),
@@ -187,6 +201,9 @@ fn build_ui(application: &gtk::Application) {
     //     Inhibit(false)
     // });
 
+    // Register our tick timer.
+    // TODO: Should use the GDK FrameClock / GtkWidget tick callback
+    // instead to support other refresh rates.
     let wsc = ws.clone();
     let _tick_id = glib::source::timeout_add_local(16 /* ms */, move || {
         tick(&*wsc);
@@ -223,7 +240,7 @@ fn build_ui(application: &gtk::Application) {
     });
 
     // Show everything recursively
-    window.show_all();
+    win_box.show_all();
 }
 
 fn graph_click(ws: &WindowState, ev: &gdk::EventButton) -> Inhibit {
