@@ -12,6 +12,7 @@ mod graph;
 pub use graph::{Config, Graph};
 
 mod graph_window;
+#[allow(deprecated)]
 pub use graph_window::{GraphWindow, GraphWindowBuilder};
 
 mod signal;

@@ -1,3 +1,5 @@
+#![allow(deprecated)]
+
 use glium::{glutin, Surface};
 use std::time::{Duration, Instant};
 use glium::glutin::event_loop::{EventLoop, ControlFlow};
@@ -47,6 +49,7 @@ static mut TGW: OnceCell<GraphWindow> = OnceCell::new();
 
 use std::sync::Mutex;
 
+#[deprecated(note = "Use rt_graph::Graph instead.")]
 #[derive(Builder, Debug)]
 #[builder(pattern = "owned")]
 pub struct GraphWindow {
@@ -167,8 +170,6 @@ impl GraphWindow {
         });
     }
 }
-
-
 
 enum Action {
     Stop,

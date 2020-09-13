@@ -1,4 +1,5 @@
 #![deny(warnings)]
+#![allow(deprecated)]
 
 use rt_graph::{GraphWindow, GraphWindowBuilder, TestDataGenerator};
 
