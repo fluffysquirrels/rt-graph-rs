@@ -2,13 +2,16 @@
 
 ## Bugs
 * Disable "Follow" button when following (add update_controls function)
-* Crashes when you zoom in too far.
+* Crashes when you zoom in too far. (max zoom?)
 * Follow before screen is filled leaves a background colour-filled
   hole. (call redraw, redraw handles ViewMode::Following).
 * Making the window wider should keep the scrollbar as the same width as the graph.
+* build_ui: showing our parent is rude / unexpected. Also I doubt it'll work for some
+  detached container.
 
 ## Features
 * Event listeners on Graph
+* Lower CPU usage when hidden (e.g. minimised). Don't bother drawing.
 * Daniel has 5 graphs, wants them all in sync.
   * Leave it up to controls at a higher level how to navigate, each graph just has show methods.
   * One graph is just the n=1 case
