@@ -1,7 +1,7 @@
 # TODO
 
 ## Bugs
-* Disable "Follow" button when following.
+* Disable "Follow" button when following (add update_controls function)
 * Crashes when you zoom in too far.
 * Follow before screen is filled leaves a background colour-filled
   hole. (call redraw, redraw handles ViewMode::Following).

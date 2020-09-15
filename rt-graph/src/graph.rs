@@ -21,6 +21,7 @@ struct WindowState {
     graph_drawing_area: gtk::DrawingArea,
     scrollbar: gtk::Scrollbar,
     btn_zoom_x_out: gtk::Button,
+    btn_follow: gtk::Button,
 
     view: RefCell<View>,
 
@@ -106,13 +107,6 @@ impl Graph {
 
         let scroll = gtk::ScrollbarBuilder::new()
             .orientation(gtk::Orientation::Horizontal)
-            .adjustment(&gtk::Adjustment::new(
-                0.0,                                  // value
-                0.0,                                  // lower
-                0.0,                                  // upper
-                (config.graph_width as f64) * view.zoom_x / 4.0, // step_increment
-                (config.graph_width as f64) * view.zoom_x / 2.0, // page_increment
-                (config.graph_width as f64) * view.zoom_x))      // page_size
             .build();
         win_box.add(&scroll);
 
@@ -163,6 +157,7 @@ impl Graph {
             graph_drawing_area: graph.clone(),
             scrollbar: scroll.clone(),
             btn_zoom_x_out: btn_zoom_x_out.clone(),
+            btn_follow: btn_follow.clone(),
 
             view: RefCell::new(view),
 
@@ -171,6 +166,8 @@ impl Graph {
 
             config,
         });
+
+        update_controls(&*ws);
 
         // Set signal handlers that require WindowState
         let wsc = ws.clone();
@@ -212,6 +209,7 @@ impl Graph {
                 view.last_t = wsc.store.borrow().last_t();
                 scroll.set_value(view.last_t as f64);
             }
+            update_controls(&*wsc);
             redraw_graph(&*wsc);
         });
 
@@ -234,6 +232,21 @@ impl Graph {
             _s: ws.clone(),
         }
     }
+}
+
+/// Update the controls (GTK widgets) from the current state.
+fn update_controls(ws: &WindowState) {
+    let adj = ws.scrollbar.get_adjustment();
+    let window_width_t = (ws.config.graph_width as f64) * ws.view.borrow().zoom_x;
+
+    adj.set_upper(ws.store.borrow().last_t() as f64);
+    adj.set_lower(0.0);
+    adj.set_step_increment(window_width_t / 4.0);
+    adj.set_page_increment(window_width_t / 2.0);
+    adj.set_page_size(window_width_t);
+
+    ws.btn_zoom_x_out.set_sensitive(ws.view.borrow().zoom_x < ws.config.base_zoom_x);
+    ws.btn_follow.set_sensitive(ws.view.borrow().mode == ViewMode::Scrolled);
 }
 
 fn graph_click(ws: &WindowState, ev: &gdk::EventButton) -> Inhibit {
@@ -292,12 +305,7 @@ fn set_zoom_x(ws: &WindowState, new_zoom_x: f64) {
         let mut view = ws.view.borrow_mut();
         view.zoom_x = new_zoom_x;
     }
-    let adj = ws.scrollbar.get_adjustment();
-    adj.set_step_increment((ws.config.graph_width as f64) * new_zoom_x / 4.0);
-    adj.set_page_increment((ws.config.graph_width as f64) * new_zoom_x / 2.0);
-    adj.set_page_size((ws.config.graph_width as f64) * new_zoom_x);
-
-    ws.btn_zoom_x_out.set_sensitive(new_zoom_x < ws.config.base_zoom_x);
+    update_controls(ws);
 
     redraw_graph(&*ws);
 }
@@ -317,6 +325,7 @@ fn scroll_change(ctrl: &gtk::Scrollbar, new_val: f64, ws: &WindowState) -> Inhib
 
         debug!("scroll_change, v={:?} view={:?}", new_val, view);
     }
+    update_controls(ws);
     // TODO: Maybe keep the section of the graph that's still valid when scrolling.
     redraw_graph(&ws);
     Inhibit(false)
