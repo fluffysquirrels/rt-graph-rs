@@ -34,7 +34,7 @@ fn build_ui(application: &gtk::Application) {
         .data_source(TestDataGenerator::new())
         .build()
         .unwrap();
-    let g = Graph::build_ui(config, &window);
+    let _g = Graph::build_ui(config, &window);
 
     window.show_all();
 }
