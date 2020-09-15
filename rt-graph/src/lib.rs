@@ -11,10 +11,6 @@ use std::fmt::Debug;
 mod graph;
 pub use graph::{Config, ConfigBuilder, Graph};
 
-mod glium_graph_window;
-#[allow(deprecated)]
-pub use glium_graph_window::{GraphWindow, GraphWindowBuilder};
-
 mod signal;
 pub use signal::Signal;
 
