@@ -19,8 +19,6 @@
 * Mouse wheel to zoom x
 * Alt left mouse to zoom box
 * Embeddable panel
-* `brew install gtk+3` to install dependencies on OS X
-* `sudo apt-get install libgtk-3-dev` to install dependencies on Ubuntu
 * Scale and offset data (auto-fill y?)
 * Probably use f32 for point data
 * Use the frame clock or add\_tick\_callback for timing instead of
