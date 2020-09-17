@@ -30,11 +30,15 @@ fn build_ui(application: &gtk::Application) {
         .window_position(gtk::WindowPosition::Center)
         .build();
 
+    // Show the window so we can get a gdk::window below.
+    window.show();
+    let gdk_window = window.get_window().unwrap();
+
     let config = ConfigBuilder::default()
         .data_source(TestDataGenerator::new())
         .build()
         .unwrap();
-    let _g = Graph::build_ui(config, &window);
+    let _g = Graph::build_ui(config, &window, &gdk_window);
 
     window.show_all();
 }

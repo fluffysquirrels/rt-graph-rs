@@ -4,9 +4,6 @@
 * Follow before screen is filled leaves a background colour-filled
   hole. (call redraw, redraw handles ViewMode::Following).
 * Making the window wider should keep the scrollbar as the same width as the graph.
-* build\_ui: showing our parent is rude / unexpected. Also I doubt it'll work for some
-  detached container. (Solutions include: ask for a Gdk::Device as a parameter to build\_ui,
-  or create the backing surfaces later lazily when required)
 
 ## Features
 * Event listeners on Graph

@@ -94,7 +94,7 @@ pub struct Graph {
 }
 
 impl Graph {
-    pub fn build_ui<C>(config: Config, container: &C) -> Graph
+    pub fn build_ui<C>(config: Config, container: &C, gdk_window: &gdk::Window) -> Graph
         where C: IsA<gtk::Container> + IsA<gtk::Widget>
     {
         let view = View::default_from_config(&config);
@@ -140,16 +140,9 @@ impl Graph {
 
         // Initialise WindowState
 
-        // Show container here so we can get an instance of gdk::Window with
-        // get_window() below, in order to create_similar_image_surface.
-
-        // TODO: Showing our parent is rude / unexpected. Also I doubt it'll work for some
-        // detached container.
-        container.show();
-
-        let backing_surface = create_backing_surface(&container.get_window().unwrap(),
+        let backing_surface = create_backing_surface(gdk_window,
                                                      config.graph_width, config.graph_height);
-        let temp_surface = create_backing_surface(&container.get_window().unwrap(),
+        let temp_surface = create_backing_surface(gdk_window,
                                                   config.graph_width, config.graph_height);
         let ds = TestDataGenerator::new();
         let s = Store::new(ds.get_num_values().unwrap() as u8);
