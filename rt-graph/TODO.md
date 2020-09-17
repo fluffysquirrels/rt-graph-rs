@@ -1,12 +1,12 @@
 # TODO
 
 ## Bugs
-* Disable "Follow" button when following (add update_controls function)
 * Follow before screen is filled leaves a background colour-filled
   hole. (call redraw, redraw handles ViewMode::Following).
 * Making the window wider should keep the scrollbar as the same width as the graph.
 * build_ui: showing our parent is rude / unexpected. Also I doubt it'll work for some
   detached container.
+* Scrollbar jumps around while dragging after we start discarding data
 
 ## Features
 * Event listeners on Graph
@@ -21,6 +21,7 @@
 * Alt left mouse to zoom box
 * Embeddable panel
 * `brew install gtk+3` to install dependencies on OS X
+* `sudo apt-get install libgtk-3-dev` to install dependencies on Ubuntu
 * Scale and offset data (auto-fill y?)
 * Probably use f32 for point data
 * Use the frame clock or add\_tick\_callback for timing instead of
