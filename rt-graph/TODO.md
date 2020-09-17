@@ -4,11 +4,13 @@
 * Follow before screen is filled leaves a background colour-filled
   hole. (call redraw, redraw handles ViewMode::Following).
 * Making the window wider should keep the scrollbar as the same width as the graph.
-* build_ui: showing our parent is rude / unexpected. Also I doubt it'll work for some
-  detached container.
+* build\_ui: showing our parent is rude / unexpected. Also I doubt it'll work for some
+  detached container. (Solutions include: ask for a Gdk::Device as a parameter to build\_ui,
+  or create the backing surfaces later lazily when required)
 
 ## Features
 * Event listeners on Graph
+* Methods on Graph: scroll, set zoom, get view.
 * Lower CPU usage when hidden (e.g. minimised). Don't bother drawing.
 * Daniel has 5 graphs, wants them all in sync.
   * Leave it up to controls at a higher level how to navigate, each graph just has show methods.
@@ -19,7 +21,7 @@
 * Mouse wheel to zoom x
 * Alt left mouse to zoom box
 * Embeddable panel
-* Scale and offset data (auto-fill y?)
+* Scale and offset data (auto-fit to y?)
 * Probably use f32 for point data
 * Use the frame clock or add\_tick\_callback for timing instead of
   just rendering every 16ms with glib::source::timeout\_add\_local.
