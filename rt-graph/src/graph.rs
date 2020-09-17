@@ -187,10 +187,8 @@ impl Graph {
         // });
 
         // Register our tick timer.
-        // TODO: Should use the GDK FrameClock / GtkWidget tick callback
-        // instead to support other refresh rates.
         let wsc = ws.clone();
-        let _tick_id = glib::source::timeout_add_local(16 /* ms */, move || {
+        let _tick_id = win_box.add_tick_callback(move |_ctrl, _clock| {
             tick(&*wsc);
             Continue(true)
         });

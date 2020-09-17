@@ -20,11 +20,6 @@
 * Embeddable panel
 * Scale and offset data (auto-fit to y?)
 * Probably use f32 for point data
-* Use the frame clock or add\_tick\_callback for timing instead of
-  just rendering every 16ms with glib::source::timeout\_add\_local.
-  See:
-  https://developer.gnome.org/gtk3/stable/GtkWidget.html#gtk-widget-get-frame-clock ,
-  https://developer.gnome.org/gtk3/stable/GtkWidget.html#gtk-widget-add-tick-callback
 
 ## Notes
 
