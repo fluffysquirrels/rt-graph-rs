@@ -1,4 +1,4 @@
-use crate::{Color, DataSource, Point, Store, TestDataGenerator};
+use crate::{Color, DataSource, Point, Store};
 use gdk::prelude::*;
 use glib::source::Continue;
 use gtk::prelude::*;
@@ -144,8 +144,7 @@ impl Graph {
                                                      config.graph_width, config.graph_height);
         let temp_surface = create_backing_surface(gdk_window,
                                                   config.graph_width, config.graph_height);
-        let ds = TestDataGenerator::new();
-        let s = Store::new(ds.get_num_values().unwrap() as u8);
+        let s = Store::new(config.data_source.borrow().get_num_values().unwrap() as u8);
         let ws = Rc::new(WindowState {
             backing_surface: RefCell::new(backing_surface),
             temp_surface: RefCell::new(temp_surface),
