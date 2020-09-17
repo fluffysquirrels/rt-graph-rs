@@ -34,7 +34,7 @@ struct WindowState {
 
 #[derive(Debug)]
 struct View {
-    /// t per pixel
+    /// Zoom level, in units of t per x pixel
     zoom_x: f64,
     last_t: u32,
     last_x: u32,
@@ -78,6 +78,7 @@ pub struct Config {
     #[builder(private, setter(name = "data_source_internal"))]
     data_source: RefCell<Box<dyn DataSource>>,
 
+    /// How many windows width of data to store at maximum zoom out.
     #[builder(default = "100")]
     windows_to_store: u32,
 }
