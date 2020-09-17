@@ -26,9 +26,6 @@
   See:
   https://developer.gnome.org/gtk3/stable/GtkWidget.html#gtk-widget-get-frame-clock ,
   https://developer.gnome.org/gtk3/stable/GtkWidget.html#gtk-widget-add-tick-callback
-* Add links to the GTK docs
-  https://developer.gnome.org/gtk3/stable/index.html
-  https://gtk-rs.org/docs-src/
 
 ## Notes
 
