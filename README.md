@@ -13,7 +13,8 @@ accelerated by GPU hardware.
 
 As a result of this design rt-graph easily copes with 30k new points
 per second, at 60 FPS, using just 3% CPU (tested on a Lenovo T460
-laptop with 2.4 GHz Intel Core i5-6300U, running Ubuntu 18.04.5).
+laptop from 2016 with 2.4 GHz Intel Core i5-6300U, running Ubuntu
+18.04.5).
 
 ## To run
 
