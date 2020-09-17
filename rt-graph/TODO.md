@@ -2,7 +2,6 @@
 
 ## Bugs
 * Disable "Follow" button when following (add update_controls function)
-* Crashes when you zoom in too far. (max zoom?)
 * Follow before screen is filled leaves a background colour-filled
   hole. (call redraw, redraw handles ViewMode::Following).
 * Making the window wider should keep the scrollbar as the same width as the graph.

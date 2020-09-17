@@ -21,6 +21,7 @@ struct WindowState {
     graph_drawing_area: gtk::DrawingArea,
     scrollbar: gtk::Scrollbar,
     btn_zoom_x_out: gtk::Button,
+    btn_zoom_x_in: gtk::Button,
     btn_follow: gtk::Button,
 
     view: RefCell<View>,
@@ -63,6 +64,10 @@ pub struct Config {
     /// Maximum zoom out, in units of t per x pixel
     #[builder(default = "1000.0")]
     base_zoom_x: f64,
+
+    /// Maximum zoom in, in units of t per x pixel
+    #[builder(default = "1.0")]
+    max_zoom_x: f64,
 
     #[builder(default = "800")]
     graph_width: u32,
@@ -157,6 +162,7 @@ impl Graph {
             graph_drawing_area: graph.clone(),
             scrollbar: scroll.clone(),
             btn_zoom_x_out: btn_zoom_x_out.clone(),
+            btn_zoom_x_in: btn_zoom_x_in.clone(),
             btn_follow: btn_follow.clone(),
 
             view: RefCell::new(view),
@@ -236,8 +242,9 @@ impl Graph {
 
 /// Update the controls (GTK widgets) from the current state.
 fn update_controls(ws: &WindowState) {
+    let view = ws.view.borrow();
     let adj = ws.scrollbar.get_adjustment();
-    let window_width_t = (ws.config.graph_width as f64) * ws.view.borrow().zoom_x;
+    let window_width_t = (ws.config.graph_width as f64) * view.zoom_x;
 
     adj.set_upper(ws.store.borrow().last_t() as f64);
     adj.set_lower(0.0);
@@ -245,8 +252,9 @@ fn update_controls(ws: &WindowState) {
     adj.set_page_increment(window_width_t / 2.0);
     adj.set_page_size(window_width_t);
 
-    ws.btn_zoom_x_out.set_sensitive(ws.view.borrow().zoom_x < ws.config.base_zoom_x);
-    ws.btn_follow.set_sensitive(ws.view.borrow().mode == ViewMode::Scrolled);
+    ws.btn_zoom_x_in.set_sensitive(view.zoom_x > ws.config.max_zoom_x);
+    ws.btn_zoom_x_out.set_sensitive(view.zoom_x < ws.config.base_zoom_x);
+    ws.btn_follow.set_sensitive(view.mode == ViewMode::Scrolled);
 }
 
 fn graph_click(ws: &WindowState, ev: &gdk::EventButton) -> Inhibit {
@@ -299,7 +307,8 @@ fn graph_click(ws: &WindowState, ev: &gdk::EventButton) -> Inhibit {
 }
 
 fn set_zoom_x(ws: &WindowState, new_zoom_x: f64) {
-    let new_zoom_x = new_zoom_x.min(ws.config.base_zoom_x);
+    let new_zoom_x = new_zoom_x.min(ws.config.base_zoom_x)
+                               .max(ws.config.max_zoom_x);
     {
         // Scope the mutable borrow of view.
         let mut view = ws.view.borrow_mut();
