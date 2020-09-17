@@ -90,7 +90,7 @@ impl ConfigBuilder {
 }
 
 pub struct Graph {
-    _s: Rc<State>,
+    s: Rc<State>,
 }
 
 impl Graph {
@@ -105,11 +105,11 @@ impl Graph {
             .build();
         container.add(&win_box);
 
-        let graph = gtk::DrawingAreaBuilder::new()
+        let drawing_area = gtk::DrawingAreaBuilder::new()
             .height_request(config.graph_height as i32)
             .width_request(config.graph_width as i32)
             .build();
-        win_box.add(&graph);
+        win_box.add(&drawing_area);
 
         let scroll = gtk::ScrollbarBuilder::new()
             .orientation(gtk::Orientation::Horizontal)
@@ -152,7 +152,7 @@ impl Graph {
             store: RefCell::new(store),
 
             win_box: win_box.clone(),
-            graph_drawing_area: graph.clone(),
+            graph_drawing_area: drawing_area.clone(),
             scrollbar: scroll.clone(),
             btn_zoom_x_out: btn_zoom_x_out.clone(),
             btn_zoom_x_in: btn_zoom_x_in.clone(),
@@ -165,23 +165,26 @@ impl Graph {
 
             config,
         });
+        let graph = Graph {
+            s: s.clone(),
+        };
 
         update_controls(&*s);
 
         // Set signal handlers that require State
         let sc = s.clone();
-        graph.connect_draw(move |ctrl, ctx| {
+        drawing_area.connect_draw(move |ctrl, ctx| {
             graph_draw(ctrl, ctx, &*sc)
         });
 
         let sc = s.clone();
-        graph.add_events(gdk::EventMask::BUTTON_PRESS_MASK);
-        graph.connect_button_press_event(move |_ctrl, ev| {
+        drawing_area.add_events(gdk::EventMask::BUTTON_PRESS_MASK);
+        drawing_area.connect_button_press_event(move |_ctrl, ev| {
             graph_click(&*sc, ev)
         });
-        // graph.add_events(gdk::EventMask::POINTER_MOTION_MASK);
-        // graph.connect_motion_notify_event(move |ctrl, ev| {
-        //     debug!("graph_mouse_move ev.pos={:?}", ev.get_position());
+        // drawing_area.add_events(gdk::EventMask::POINTER_MOTION_MASK);
+        // drawing_area.connect_motion_notify_event(move |ctrl, ev| {
+        //     debug!("drawing_area_mouse_move ev.pos={:?}", ev.get_position());
         //     Inhibit(false)
         // });
 
@@ -197,37 +200,58 @@ impl Graph {
             scroll_change(ctrl, v, &*sc)
         });
 
-        let sc = s.clone();
+        let gc = graph.clone();
         btn_follow.connect_clicked(move |_btn| {
-            {
-                // Scope the mutable borrow of view.
-                let mut view = sc.view.borrow_mut();
-                view.mode = ViewMode::Following;
-                view.last_t = sc.store.borrow().last_t();
-                scroll.set_value(view.last_t as f64);
-            }
-            update_controls(&*sc);
-            redraw_graph(&*sc);
+            gc.set_follow()
         });
 
-        let sc = s.clone();
+        let gc = graph.clone();
         btn_zoom_x_in.connect_clicked(move |_btn| {
-            let new = sc.view.borrow().zoom_x / 2.0;
-            set_zoom_x(&*sc, new);
+            let new = gc.s.view.borrow().zoom_x / 2.0;
+            gc.set_zoom_x(new);
         });
 
-        let sc = s.clone();
+        let gc = graph.clone();
         btn_zoom_x_out.connect_clicked(move |_btn| {
-            let new = sc.view.borrow().zoom_x * 2.0;
-            set_zoom_x(&*sc, new);
+            let new = gc.s.view.borrow().zoom_x * 2.0;
+            gc.set_zoom_x(new);
         });
 
         // Show everything recursively
         win_box.show_all();
 
+        graph
+    }
+
+    fn clone(&self) -> Graph {
         Graph {
-            _s: s.clone(),
+            s: self.s.clone()
         }
+    }
+
+    pub fn set_zoom_x(&self, new_zoom_x: f64) {
+        let new_zoom_x = new_zoom_x.min(self.s.config.base_zoom_x)
+            .max(self.s.config.max_zoom_x);
+        {
+            // Scope the mutable borrow of view.
+            let mut view = self.s.view.borrow_mut();
+            view.zoom_x = new_zoom_x;
+        }
+        update_controls(&*self.s);
+
+        redraw_graph(&*self.s);
+    }
+
+    pub fn set_follow(&self) {
+        {
+            // Scope the mutable borrow of view.
+            let mut view = self.s.view.borrow_mut();
+            view.mode = ViewMode::Following;
+            view.last_t = self.s.store.borrow().last_t();
+            self.s.scrollbar.set_value(view.last_t as f64);
+        }
+        update_controls(&*self.s);
+        redraw_graph(&*self.s);
     }
 }
 
@@ -300,19 +324,6 @@ fn graph_click(s: &State, ev: &gdk::EventButton) -> Inhibit {
     Inhibit(false)
 }
 
-fn set_zoom_x(s: &State, new_zoom_x: f64) {
-    let new_zoom_x = new_zoom_x.min(s.config.base_zoom_x)
-                               .max(s.config.max_zoom_x);
-    {
-        // Scope the mutable borrow of view.
-        let mut view = s.view.borrow_mut();
-        view.zoom_x = new_zoom_x;
-    }
-    update_controls(s);
-
-    redraw_graph(&*s);
-}
-
 fn scroll_change(ctrl: &gtk::Scrollbar, new_val: f64, s: &State) -> Inhibit {
     {
         // Scope the borrow_mut on view
@@ -323,7 +334,7 @@ fn scroll_change(ctrl: &gtk::Scrollbar, new_val: f64, s: &State) -> Inhibit {
             ViewMode::Scrolled
         };
         view.last_t = (new_val as u32 + ((view.zoom_x * s.config.graph_width as f64) as u32))
-        .min(s.store.borrow().last_t());
+            .min(s.store.borrow().last_t());
         view.last_x = 0;
 
         debug!("scroll_change, v={:?} view={:?}", new_val, view);
