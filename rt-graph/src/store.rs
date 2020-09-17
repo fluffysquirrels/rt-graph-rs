@@ -61,6 +61,12 @@ impl Store {
         self.last_t
     }
 
+    pub fn first_t(&self) -> u32 {
+        self.query_point(0).unwrap()
+                           .map(|pt| pt.t)
+                           .unwrap_or(0)
+    }
+
     pub fn val_len(&self) -> u8 {
         self.val_len
     }

@@ -6,7 +6,6 @@
 * Making the window wider should keep the scrollbar as the same width as the graph.
 * build_ui: showing our parent is rude / unexpected. Also I doubt it'll work for some
   detached container.
-* Scrollbar jumps around while dragging after we start discarding data
 
 ## Features
 * Event listeners on Graph

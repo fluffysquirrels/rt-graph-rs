@@ -248,10 +248,13 @@ fn update_controls(ws: &WindowState) {
     let window_width_t = (ws.config.graph_width as f64) * view.zoom_x;
 
     adj.set_upper(ws.store.borrow().last_t() as f64);
-    adj.set_lower(0.0);
+    adj.set_lower(ws.store.borrow().first_t() as f64);
     adj.set_step_increment(window_width_t / 4.0);
     adj.set_page_increment(window_width_t / 2.0);
     adj.set_page_size(window_width_t);
+    if view.mode == ViewMode::Following {
+        adj.set_value(ws.store.borrow().last_t() as f64);
+    }
 
     ws.btn_zoom_x_in.set_sensitive(view.zoom_x > ws.config.max_zoom_x);
     ws.btn_zoom_x_out.set_sensitive(view.zoom_x < ws.config.base_zoom_x);
@@ -414,14 +417,9 @@ fn tick(ws: &WindowState) {
         ws.store.borrow_mut().discard(0, discard_start).unwrap();
     }
 
-    let mut view = ws.view.borrow_mut();
+    update_controls(ws);
 
-    // Update scroll bar.
-    ws.scrollbar.get_adjustment().set_upper(t_latest as f64);
-    ws.scrollbar.get_adjustment().set_lower(discard_start as f64);
-    if view.mode == ViewMode::Following {
-        ws.scrollbar.set_value(t_latest as f64);
-    }
+    let mut view = ws.view.borrow_mut();
 
     if new_data.len() > 0 && (view.mode == ViewMode::Following ||
                               (view.mode == ViewMode::Scrolled && view.last_x < ws.config.graph_width)) {
