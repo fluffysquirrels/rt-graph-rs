@@ -11,7 +11,7 @@ use std::{
 const BYTES_PER_PIXEL: usize = 4;
 const BACKGROUND_COLOR: (f64, f64, f64) = (0.4, 0.4, 0.4);
 
-struct WindowState {
+struct State {
     backing_surface: RefCell<cairo::Surface>,
     temp_surface: RefCell<cairo::Surface>,
 
@@ -90,7 +90,7 @@ impl ConfigBuilder {
 }
 
 pub struct Graph {
-    _s: Rc<WindowState>,
+    _s: Rc<State>,
 }
 
 impl Graph {
@@ -138,18 +138,18 @@ impl Graph {
             .build();
         buttons_box.add(&btn_zoom_x_out);
 
-        // Initialise WindowState
+        // Initialise State
 
         let backing_surface = create_backing_surface(gdk_window,
                                                      config.graph_width, config.graph_height);
         let temp_surface = create_backing_surface(gdk_window,
                                                   config.graph_width, config.graph_height);
-        let s = Store::new(config.data_source.borrow().get_num_values().unwrap() as u8);
-        let ws = Rc::new(WindowState {
+        let store = Store::new(config.data_source.borrow().get_num_values().unwrap() as u8);
+        let s = Rc::new(State {
             backing_surface: RefCell::new(backing_surface),
             temp_surface: RefCell::new(temp_surface),
 
-            store: RefCell::new(s),
+            store: RefCell::new(store),
 
             win_box: win_box.clone(),
             graph_drawing_area: graph.clone(),
@@ -166,18 +166,18 @@ impl Graph {
             config,
         });
 
-        update_controls(&*ws);
+        update_controls(&*s);
 
-        // Set signal handlers that require WindowState
-        let wsc = ws.clone();
+        // Set signal handlers that require State
+        let sc = s.clone();
         graph.connect_draw(move |ctrl, ctx| {
-            graph_draw(ctrl, ctx, &*wsc)
+            graph_draw(ctrl, ctx, &*sc)
         });
 
-        let wsc = ws.clone();
+        let sc = s.clone();
         graph.add_events(gdk::EventMask::BUTTON_PRESS_MASK);
         graph.connect_button_press_event(move |_ctrl, ev| {
-            graph_click(&*wsc, ev)
+            graph_click(&*sc, ev)
         });
         // graph.add_events(gdk::EventMask::POINTER_MOTION_MASK);
         // graph.connect_motion_notify_event(move |ctrl, ev| {
@@ -186,79 +186,79 @@ impl Graph {
         // });
 
         // Register our tick timer.
-        let wsc = ws.clone();
+        let sc = s.clone();
         let _tick_id = win_box.add_tick_callback(move |_ctrl, _clock| {
-            tick(&*wsc);
+            tick(&*sc);
             Continue(true)
         });
 
-        let wsc = ws.clone();
+        let sc = s.clone();
         scroll.connect_change_value(move |ctrl, _scroll_type, v| {
-            scroll_change(ctrl, v, &*wsc)
+            scroll_change(ctrl, v, &*sc)
         });
 
-        let wsc = ws.clone();
+        let sc = s.clone();
         btn_follow.connect_clicked(move |_btn| {
             {
                 // Scope the mutable borrow of view.
-                let mut view = wsc.view.borrow_mut();
+                let mut view = sc.view.borrow_mut();
                 view.mode = ViewMode::Following;
-                view.last_t = wsc.store.borrow().last_t();
+                view.last_t = sc.store.borrow().last_t();
                 scroll.set_value(view.last_t as f64);
             }
-            update_controls(&*wsc);
-            redraw_graph(&*wsc);
+            update_controls(&*sc);
+            redraw_graph(&*sc);
         });
 
-        let wsc = ws.clone();
+        let sc = s.clone();
         btn_zoom_x_in.connect_clicked(move |_btn| {
-            let new = wsc.view.borrow().zoom_x / 2.0;
-            set_zoom_x(&*wsc, new);
+            let new = sc.view.borrow().zoom_x / 2.0;
+            set_zoom_x(&*sc, new);
         });
 
-        let wsc = ws.clone();
+        let sc = s.clone();
         btn_zoom_x_out.connect_clicked(move |_btn| {
-            let new = wsc.view.borrow().zoom_x * 2.0;
-            set_zoom_x(&*wsc, new);
+            let new = sc.view.borrow().zoom_x * 2.0;
+            set_zoom_x(&*sc, new);
         });
 
         // Show everything recursively
         win_box.show_all();
 
         Graph {
-            _s: ws.clone(),
+            _s: s.clone(),
         }
     }
 }
 
 /// Update the controls (GTK widgets) from the current state.
-fn update_controls(ws: &WindowState) {
-    let view = ws.view.borrow();
-    let adj = ws.scrollbar.get_adjustment();
-    let window_width_t = (ws.config.graph_width as f64) * view.zoom_x;
+fn update_controls(s: &State) {
+    let view = s.view.borrow();
+    let adj = s.scrollbar.get_adjustment();
+    let window_width_t = (s.config.graph_width as f64) * view.zoom_x;
 
-    adj.set_upper(ws.store.borrow().last_t() as f64);
-    adj.set_lower(ws.store.borrow().first_t() as f64);
+    adj.set_upper(s.store.borrow().last_t() as f64);
+    adj.set_lower(s.store.borrow().first_t() as f64);
     adj.set_step_increment(window_width_t / 4.0);
     adj.set_page_increment(window_width_t / 2.0);
     adj.set_page_size(window_width_t);
     if view.mode == ViewMode::Following {
-        adj.set_value(ws.store.borrow().last_t() as f64);
+        adj.set_value(s.store.borrow().last_t() as f64);
     }
 
-    ws.btn_zoom_x_in.set_sensitive(view.zoom_x > ws.config.max_zoom_x);
-    ws.btn_zoom_x_out.set_sensitive(view.zoom_x < ws.config.base_zoom_x);
-    ws.btn_follow.set_sensitive(view.mode == ViewMode::Scrolled);
+    s.btn_zoom_x_in.set_sensitive(view.zoom_x > s.config.max_zoom_x);
+    s.btn_zoom_x_out.set_sensitive(view.zoom_x < s.config.base_zoom_x);
+    s.btn_follow.set_sensitive(view.mode == ViewMode::Scrolled);
 }
 
-fn graph_click(ws: &WindowState, ev: &gdk::EventButton) -> Inhibit {
+fn graph_click(s: &State, ev: &gdk::EventButton) -> Inhibit {
     let pos = ev.get_position();
-    let view = ws.view.borrow();
+    let view = s.view.borrow();
     let t = (view.last_t as i64 +
              ((pos.0 - (view.last_x as f64)) * view.zoom_x) as i64)
              .max(0).min(view.last_t as i64)
         as u32;
-    let pt = ws.store.borrow().query_point(t).unwrap();
+    let pt = s.store.borrow().query_point(t).unwrap();
 
     // If we are getting a point >= 10 pixels away, return None instead.
     // This can happen when old data has been discarded but is still on screen.
@@ -273,7 +273,7 @@ fn graph_click(ws: &WindowState, ev: &gdk::EventButton) -> Inhibit {
     if let Some(pta) = pt {
         let info_bar = gtk::InfoBarBuilder::new()
             .build();
-        ws.win_box.add(&info_bar);
+        s.win_box.add(&info_bar);
         info_bar.get_content_area().add(&gtk::Label::new(Some("t, vs:")));
 
         let entry = gtk::EntryBuilder::new()
@@ -289,7 +289,7 @@ fn graph_click(ws: &WindowState, ev: &gdk::EventButton) -> Inhibit {
         info_bar.get_action_area().unwrap().add(&close_btn);
 
         let ibc = info_bar.clone();
-        let wbc = ws.win_box.clone();
+        let wbc = s.win_box.clone();
         close_btn.connect_clicked(move |_btn| {
             wbc.remove(&ibc);
         });
@@ -300,85 +300,85 @@ fn graph_click(ws: &WindowState, ev: &gdk::EventButton) -> Inhibit {
     Inhibit(false)
 }
 
-fn set_zoom_x(ws: &WindowState, new_zoom_x: f64) {
-    let new_zoom_x = new_zoom_x.min(ws.config.base_zoom_x)
-                               .max(ws.config.max_zoom_x);
+fn set_zoom_x(s: &State, new_zoom_x: f64) {
+    let new_zoom_x = new_zoom_x.min(s.config.base_zoom_x)
+                               .max(s.config.max_zoom_x);
     {
         // Scope the mutable borrow of view.
-        let mut view = ws.view.borrow_mut();
+        let mut view = s.view.borrow_mut();
         view.zoom_x = new_zoom_x;
     }
-    update_controls(ws);
+    update_controls(s);
 
-    redraw_graph(&*ws);
+    redraw_graph(&*s);
 }
 
-fn scroll_change(ctrl: &gtk::Scrollbar, new_val: f64, ws: &WindowState) -> Inhibit {
+fn scroll_change(ctrl: &gtk::Scrollbar, new_val: f64, s: &State) -> Inhibit {
     {
         // Scope the borrow_mut on view
-        let mut view = ws.view.borrow_mut();
+        let mut view = s.view.borrow_mut();
         view.mode = if new_val >= ctrl.get_adjustment().get_upper() - 1.0 {
             ViewMode::Following
         } else {
             ViewMode::Scrolled
         };
-        view.last_t = (new_val as u32 + ((view.zoom_x * ws.config.graph_width as f64) as u32))
-        .min(ws.store.borrow().last_t());
+        view.last_t = (new_val as u32 + ((view.zoom_x * s.config.graph_width as f64) as u32))
+        .min(s.store.borrow().last_t());
         view.last_x = 0;
 
         debug!("scroll_change, v={:?} view={:?}", new_val, view);
     }
-    update_controls(ws);
+    update_controls(s);
     // TODO: Maybe keep the section of the graph that's still valid when scrolling.
-    redraw_graph(&ws);
+    redraw_graph(&s);
     Inhibit(false)
 }
 
 /// Handle the graph's draw signal.
-fn graph_draw(_ctrl: &gtk::DrawingArea, ctx: &cairo::Context, ws: &WindowState) -> Inhibit {
+fn graph_draw(_ctrl: &gtk::DrawingArea, ctx: &cairo::Context, s: &State) -> Inhibit {
     trace!("graph_draw");
 
     // Copy from the backing_surface, which was updated elsewhere
-    ctx.rectangle(0.0, 0.0, ws.config.graph_width as f64, ws.config.graph_height as f64);
-    ctx.set_source_surface(&ws.backing_surface.borrow(),
+    ctx.rectangle(0.0, 0.0, s.config.graph_width as f64, s.config.graph_height as f64);
+    ctx.set_source_surface(&s.backing_surface.borrow(),
                            0.0 /* offset x */, 0.0 /* offset y */);
     ctx.fill();
 
     // Calculate FPS, log it once a second.
-    ws.fps_count.set(ws.fps_count.get() + 1);
+    s.fps_count.set(s.fps_count.get() + 1);
     let now = Instant::now();
-    if (now - ws.fps_timer.get()).as_secs() >= 1 {
-        debug!("fps: {}", ws.fps_count.get());
-        ws.fps_count.set(0);
-        ws.fps_timer.set(now);
+    if (now - s.fps_timer.get()).as_secs() >= 1 {
+        debug!("fps: {}", s.fps_count.get());
+        s.fps_count.set(0);
+        s.fps_timer.set(now);
     }
 
     Inhibit(false)
 }
 
 /// Redraw the whole graph to the backing store
-fn redraw_graph(ws: &WindowState) {
+fn redraw_graph(s: &State) {
     trace!("redraw_graph");
-    let backing_surface = ws.backing_surface.borrow();
+    let backing_surface = s.backing_surface.borrow();
     {
         // Clear backing_surface
         let c = cairo::Context::new(&*backing_surface);
         c.set_source_rgb(BACKGROUND_COLOR.0,
                          BACKGROUND_COLOR.1,
                          BACKGROUND_COLOR.2);
-        c.rectangle(0.0, 0.0, ws.config.graph_width as f64, ws.config.graph_height as f64);
+        c.rectangle(0.0, 0.0, s.config.graph_width as f64, s.config.graph_height as f64);
         c.fill();
     }
 
-    let mut view = ws.view.borrow_mut();
-    let cols = ws.config.data_source.borrow().get_colors().unwrap();
+    let mut view = s.view.borrow_mut();
+    let cols = s.config.data_source.borrow().get_colors().unwrap();
     let t1: u32 = view.last_t;
-    let t0: u32 = (t1 as i64 - (ws.config.graph_width as f64 * view.zoom_x) as i64).max(0) as u32;
-    let patch_dims = ((((t1-t0) as f64 / (view.zoom_x as f64)) as u32).min(ws.config.graph_width) as usize,
-                      ws.config.graph_height as usize);
+    let t0: u32 = (t1 as i64 - (s.config.graph_width as f64 * view.zoom_x) as i64).max(0) as u32;
+    let patch_dims = ((((t1-t0) as f64 / (view.zoom_x as f64)) as u32).min(s.config.graph_width) as usize,
+                      s.config.graph_height as usize);
     if patch_dims.0 > 0 {
         let mut patch_bytes = vec![0u8; patch_dims.0 * patch_dims.1 * BYTES_PER_PIXEL];
-        render_patch(&*ws.store.borrow(), &cols, &mut patch_bytes,
+        render_patch(&*s.store.borrow(), &cols, &mut patch_bytes,
                      patch_dims.0, patch_dims.1,
                      t0, t1,
                      0, std::u16::MAX). unwrap();
@@ -387,80 +387,80 @@ fn redraw_graph(ws: &WindowState) {
                    0 /* x */, 0 /* y */);
         view.last_x = patch_dims.0 as u32;
     }
-    ws.graph_drawing_area.queue_draw();
+    s.graph_drawing_area.queue_draw();
 }
 
-fn tick(ws: &WindowState) {
+fn tick(s: &State) {
     trace!("tick");
 
     // Ingest new data
-    let new_data = ws.config.data_source.borrow_mut().get_data().unwrap();
-    ws.store.borrow_mut().ingest(&*new_data).unwrap();
+    let new_data = s.config.data_source.borrow_mut().get_data().unwrap();
+    s.store.borrow_mut().ingest(&*new_data).unwrap();
 
-    let t_latest = ws.store.borrow().last_t();
+    let t_latest = s.store.borrow().last_t();
 
     // Discard old data if there is any
-    let window_base_dt = (ws.config.graph_width as f64 * ws.config.base_zoom_x) as u32;
-    let keep_window = ws.config.windows_to_store * window_base_dt;
+    let window_base_dt = (s.config.graph_width as f64 * s.config.base_zoom_x) as u32;
+    let keep_window = s.config.windows_to_store * window_base_dt;
     let discard_start = if t_latest >= keep_window { t_latest - keep_window } else { 0 };
     if discard_start > 0 {
-        ws.store.borrow_mut().discard(0, discard_start).unwrap();
+        s.store.borrow_mut().discard(0, discard_start).unwrap();
     }
 
-    update_controls(ws);
+    update_controls(s);
 
-    let mut view = ws.view.borrow_mut();
+    let mut view = s.view.borrow_mut();
 
     if new_data.len() > 0 && (view.mode == ViewMode::Following ||
-                              (view.mode == ViewMode::Scrolled && view.last_x < ws.config.graph_width)) {
+                              (view.mode == ViewMode::Scrolled && view.last_x < s.config.graph_width)) {
         // Draw the new data.
 
         // Calculate the size of the latest patch to render.
-        // TODO: Handle when patch_dims.0 >= ws.config.graph_width.
+        // TODO: Handle when patch_dims.0 >= s.config.graph_width.
         // TODO: Handle scrolled when new data is offscreen (don't draw)
         let patch_dims =
             (((t_latest - view.last_t) as f64 / view.zoom_x).floor() as usize,
-             ws.config.graph_height as usize);
+             s.config.graph_height as usize);
         // If there is more than a pixel's worth of data to render since we last drew,
         // then draw it.
         if patch_dims.0 > 0 {
             let mut patch_bytes = vec![0u8; patch_dims.0 * patch_dims.1 * BYTES_PER_PIXEL];
             let new_t = view.last_t + (patch_dims.0 as f64 * view.zoom_x) as u32;
-            let cols = ws.config.data_source.borrow().get_colors().unwrap();
-            render_patch(&ws.store.borrow(), &cols, &mut patch_bytes,
+            let cols = s.config.data_source.borrow().get_colors().unwrap();
+            render_patch(&s.store.borrow(), &cols, &mut patch_bytes,
                          patch_dims.0, patch_dims.1,
                          view.last_t, new_t,
                          0, std::u16::MAX).unwrap();
 
             let patch_offset_x = match view.mode {
-                ViewMode::Following => ws.config.graph_width - (patch_dims.0 as u32),
+                ViewMode::Following => s.config.graph_width - (patch_dims.0 as u32),
                 ViewMode::Scrolled => view.last_x,
             };
 
             if view.mode == ViewMode::Following {
                 // Copy existing graph to the temp surface, offsetting it to the left.
-                let c = cairo::Context::new(&*ws.temp_surface.borrow());
-                c.set_source_surface(&*ws.backing_surface.borrow(),
+                let c = cairo::Context::new(&*s.temp_surface.borrow());
+                c.set_source_surface(&*s.backing_surface.borrow(),
                                      -(patch_dims.0 as f64) /* x offset*/, 0.0 /* y offset */);
                 c.rectangle(0.0, // x offset
                             0.0, // y offset
                             patch_offset_x as f64, // width
-                            ws.config.graph_height as f64); // height
+                            s.config.graph_height as f64); // height
                 c.fill();
 
                 // Present new graph by swapping the surfaces.
-                ws.backing_surface.swap(&ws.temp_surface);
+                s.backing_surface.swap(&s.temp_surface);
             }
-            copy_patch(&ws.backing_surface.borrow(), patch_bytes,
+            copy_patch(&s.backing_surface.borrow(), patch_bytes,
                        patch_dims.0 /* w */, patch_dims.1 /* h */,
                        patch_offset_x as usize /* x */, 0 /* y */);
 
             view.last_t = new_t;
-            view.last_x = (patch_offset_x + patch_dims.0 as u32).min(ws.config.graph_width);
+            view.last_x = (patch_offset_x + patch_dims.0 as u32).min(s.config.graph_width);
         }
 
         // Invalidate the graph widget so we get a draw request.
-        ws.graph_drawing_area.queue_draw();
+        s.graph_drawing_area.queue_draw();
     }
 }
 
