@@ -197,9 +197,10 @@ impl Graph {
             Continue(true)
         });
 
-        let sc = s.clone();
-        scroll.connect_change_value(move |ctrl, _scroll_type, v| {
-            scroll_change(ctrl, v, &*sc)
+        let gc = graph.clone();
+        scroll.connect_change_value(move |_ctrl, _scroll_type, v| {
+            gc.scroll(v);
+            Inhibit(false)
         });
 
         let gc = graph.clone();
@@ -232,6 +233,7 @@ impl Graph {
     }
 
     pub fn set_zoom_x(&self, new_zoom_x: f64) {
+        debug!("set_zoom_x new_zoom_x={}", new_zoom_x);
         let new_zoom_x = new_zoom_x.min(self.s.config.base_zoom_x)
             .max(self.s.config.max_zoom_x);
         {
@@ -256,6 +258,29 @@ impl Graph {
         update_controls(&*self.s);
         redraw_graph(&*self.s);
     }
+
+    pub fn scroll(&self, new_val: f64) {
+        {
+            // Scope the borrow_mut on view
+            let mut view = self.s.view.borrow_mut();
+            view.mode = if new_val >= self.s.scrollbar.get_adjustment().get_upper() - 1.0 {
+                ViewMode::Following
+            } else {
+                ViewMode::Scrolled
+            };
+
+            // TODO: Aliasing artifacts while scrolling: scroll to whole pixels.
+            view.last_t = (new_val as u32 +
+                           ((view.zoom_x * self.s.config.graph_width as f64) as u32))
+                .min(self.s.store.borrow().last_t());
+            view.last_x = 0;
+
+            debug!("scroll_change, v={:?} view={:?}", new_val, view);
+        }
+        update_controls(&self.s);
+        // TODO: Maybe keep the section of the graph that's still valid when scrolling.
+        redraw_graph(&self.s);
+    }
 }
 
 /// Update the controls (GTK widgets) from the current state.
@@ -269,8 +294,11 @@ fn update_controls(s: &State) {
     adj.set_step_increment(window_width_t / 4.0);
     adj.set_page_increment(window_width_t / 2.0);
     adj.set_page_size(window_width_t);
-    if view.mode == ViewMode::Following {
-        adj.set_value(s.store.borrow().last_t() as f64);
+    match view.mode {
+        ViewMode::Following =>
+            adj.set_value(s.store.borrow().last_t() as f64),
+        ViewMode::Scrolled => adj.set_value(view.last_t as f64 -
+                                            ((s.config.graph_width as f64) * view.zoom_x)),
     }
 
     s.btn_zoom_x_in.set_sensitive(view.zoom_x > s.config.max_zoom_x);
@@ -324,27 +352,6 @@ fn graph_click(s: &State, ev: &gdk::EventButton) -> Inhibit {
         info_bar.show_all();
     }
 
-    Inhibit(false)
-}
-
-fn scroll_change(ctrl: &gtk::Scrollbar, new_val: f64, s: &State) -> Inhibit {
-    {
-        // Scope the borrow_mut on view
-        let mut view = s.view.borrow_mut();
-        view.mode = if new_val >= ctrl.get_adjustment().get_upper() - 1.0 {
-            ViewMode::Following
-        } else {
-            ViewMode::Scrolled
-        };
-        view.last_t = (new_val as u32 + ((view.zoom_x * s.config.graph_width as f64) as u32))
-            .min(s.store.borrow().last_t());
-        view.last_x = 0;
-
-        debug!("scroll_change, v={:?} view={:?}", new_val, view);
-    }
-    update_controls(s);
-    // TODO: Maybe keep the section of the graph that's still valid when scrolling.
-    redraw_graph(&s);
     Inhibit(false)
 }
 

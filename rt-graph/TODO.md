@@ -5,8 +5,8 @@
 * Aliasing artifacts while scrolling: scroll to whole pixels.
 
 ## Features
-* Event listeners on Graph: scroll, follow, zoom.
-* Methods on Graph: scroll.
+* Event listeners on Graph: scroll, follow, zoom, click.
+* Methods on Graph: others?
 * Lower CPU usage when hidden (e.g. minimised). Don't bother drawing.
 * Daniel has 5 graphs, wants them all in sync.
   * Leave it up to controls at a higher level how to navigate, each graph just has show methods.
