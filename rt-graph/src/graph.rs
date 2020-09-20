@@ -245,6 +245,7 @@ impl Graph {
     }
 
     pub fn set_follow(&self) {
+        debug!("set_follow");
         {
             // Scope the mutable borrow of view.
             let mut view = self.s.view.borrow_mut();
@@ -387,17 +388,23 @@ fn redraw_graph(s: &State) {
     let cols = s.config.data_source.borrow().get_colors().unwrap();
     let t1: u32 = view.last_t;
     let t0: u32 = (t1 as i64 - (s.config.graph_width as f64 * view.zoom_x) as i64).max(0) as u32;
-    let patch_dims = ((((t1-t0) as f64 / (view.zoom_x as f64)) as u32).min(s.config.graph_width) as usize,
+    let patch_dims = ((((t1-t0) as f64 / view.zoom_x).floor() as u32)
+                          .min(s.config.graph_width) as usize,
                       s.config.graph_height as usize);
     if patch_dims.0 > 0 {
+        let x = match view.mode {
+            ViewMode::Following => (s.config.graph_width as usize) - patch_dims.0,
+            ViewMode::Scrolled => 0,
+        };
         render_patch(&*backing_surface,
                      &s.store.borrow(),
                      &cols,
                      patch_dims.0 /* w */, patch_dims.1 /* h */,
-                     0 /* x */, 0 /* y */,
+                     x /* x */, 0 /* y */,
                      t0, t1,
                      0 /* v0 */, std::u16::MAX /* v1 */);
-        view.last_x = patch_dims.0 as u32;
+        view.last_x = (x + patch_dims.0) as u32;
+        view.last_t = t1;
     }
     s.graph_drawing_area.queue_draw();
 }

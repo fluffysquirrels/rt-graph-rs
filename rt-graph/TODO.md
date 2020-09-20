@@ -1,8 +1,6 @@
 # TODO
 
 ## Bugs
-* Follow before screen is filled leaves a background colour-filled
-  hole. (call redraw, redraw handles ViewMode::Following).
 * Making the window wider should keep the scrollbar as the same width as the graph.
 
 ## Features
