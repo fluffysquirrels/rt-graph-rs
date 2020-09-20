@@ -1,4 +1,4 @@
-use crate::{Color, DataSource, Point, Store};
+use crate::{Color, DataSource, Point, Result, Store};
 use gdk::prelude::*;
 use glib::source::Continue;
 use gtk::prelude::*;
@@ -94,6 +94,7 @@ pub struct Graph {
 }
 
 impl Graph {
+    /// Build and show a `Graph` widget in the target `gtk::Container`.
     pub fn build_ui<C>(config: Config, container: &C, gdk_window: &gdk::Window) -> Graph
         where C: IsA<gtk::Container> + IsA<gtk::Widget>
     {
@@ -388,14 +389,13 @@ fn redraw_graph(s: &State) {
     let patch_dims = ((((t1-t0) as f64 / (view.zoom_x as f64)) as u32).min(s.config.graph_width) as usize,
                       s.config.graph_height as usize);
     if patch_dims.0 > 0 {
-        let mut patch_bytes = vec![0u8; patch_dims.0 * patch_dims.1 * BYTES_PER_PIXEL];
-        render_patch(&*s.store.borrow(), &cols, &mut patch_bytes,
-                     patch_dims.0, patch_dims.1,
+        render_patch(&*backing_surface,
+                     &s.store.borrow(),
+                     &cols,
+                     patch_dims.0 /* w */, patch_dims.1 /* h */,
+                     0 /* x */, 0 /* y */,
                      t0, t1,
-                     0, std::u16::MAX). unwrap();
-        copy_patch(&*backing_surface, patch_bytes,
-                   patch_dims.0, patch_dims.1,
-                   0 /* x */, 0 /* y */);
+                     0 /* v0 */, std::u16::MAX /* v1 */);
         view.last_x = patch_dims.0 as u32;
     }
     s.graph_drawing_area.queue_draw();
@@ -435,13 +435,7 @@ fn tick(s: &State) {
         // If there is more than a pixel's worth of data to render since we last drew,
         // then draw it.
         if patch_dims.0 > 0 {
-            let mut patch_bytes = vec![0u8; patch_dims.0 * patch_dims.1 * BYTES_PER_PIXEL];
             let new_t = view.last_t + (patch_dims.0 as f64 * view.zoom_x) as u32;
-            let cols = s.config.data_source.borrow().get_colors().unwrap();
-            render_patch(&s.store.borrow(), &cols, &mut patch_bytes,
-                         patch_dims.0, patch_dims.1,
-                         view.last_t, new_t,
-                         0, std::u16::MAX).unwrap();
 
             let patch_offset_x = match view.mode {
                 ViewMode::Following => s.config.graph_width - (patch_dims.0 as u32),
@@ -462,9 +456,15 @@ fn tick(s: &State) {
                 // Present new graph by swapping the surfaces.
                 s.backing_surface.swap(&s.temp_surface);
             }
-            copy_patch(&s.backing_surface.borrow(), patch_bytes,
-                       patch_dims.0 /* w */, patch_dims.1 /* h */,
-                       patch_offset_x as usize /* x */, 0 /* y */);
+
+            let cols = s.config.data_source.borrow().get_colors().unwrap();
+            render_patch(&s.backing_surface.borrow(),
+                         &s.store.borrow(),
+                         &cols,
+                         patch_dims.0 /* w */, patch_dims.1 /* h */,
+                         patch_offset_x as usize, 0 /* y */,
+                         view.last_t, new_t,
+                         0 /* v0 */, std::u16::MAX /* v1 */);
 
             view.last_t = new_t;
             view.last_x = (patch_offset_x + patch_dims.0 as u32).min(s.config.graph_width);
@@ -476,14 +476,31 @@ fn tick(s: &State) {
 }
 
 fn render_patch(
+    surface: &cairo::Surface,
+    store: &Store, cols: &[Color],
+    pw: usize, ph: usize,
+    x: usize, y: usize,
+    t0: u32, t1: u32, v0: u16, v1: u16
+) {
+    let mut patch_bytes = vec![0u8; pw * ph * BYTES_PER_PIXEL];
+    render_patch_to_bytes(store, cols, &mut patch_bytes,
+                          pw, ph,
+                          t0, t1,
+                          v0, v1).unwrap();
+    copy_patch(surface, patch_bytes,
+               pw, ph,
+               x, y);
+}
+
+fn render_patch_to_bytes(
     store: &Store, cols: &[Color],
     pb: &mut [u8], pbw: usize, pbh: usize,
     t0: u32, t1: u32, v0: u16, v1: u16
-) -> Result<(), ()> {
+) -> Result<()> {
 
-    trace!("render_patch: pbw={}", pbw);
+    trace!("render_patch_to_bytes: pbw={}", pbw);
     assert!(pbw >= 1);
-    let points = store.query_range(t0, t1).unwrap();
+    let points = store.query_range(t0, t1)?;
     for p in points {
         assert!(p.t >= t0 && p.t <= t1);
 
@@ -516,7 +533,8 @@ fn copy_patch(
     backing_surface: &cairo::Surface,
     bytes: Vec<u8>,
     w: usize, h: usize,
-    x: usize, y: usize) {
+    x: usize, y: usize
+) {
 
     trace!("copy_patch w={} x={}", w, x);
 
@@ -527,7 +545,7 @@ fn copy_patch(
         w as i32,
         h as i32,
         (w * BYTES_PER_PIXEL) as i32 /* stride */
-            ).unwrap();
+    ).unwrap();
 
     // Copy from the ImageSurface to backing_surface
     let c = cairo::Context::new(&backing_surface);
