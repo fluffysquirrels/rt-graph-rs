@@ -10,6 +10,7 @@ use std::{
 
 const BYTES_PER_PIXEL: usize = 4;
 const BACKGROUND_COLOR: (f64, f64, f64) = (0.4, 0.4, 0.4);
+const DRAWN_AREA_BACKGROUND_COLOR: (f64, f64, f64) = (0.0, 0.0, 0.0);
 
 struct State {
     backing_surface: RefCell<cairo::Surface>,
@@ -554,7 +555,9 @@ fn copy_patch(
                 y as f64,
                 w as f64, // width
                 h as f64  /* height */);
-    c.set_source_rgb(0.0, 0.0, 0.0);
+    c.set_source_rgb(DRAWN_AREA_BACKGROUND_COLOR.0,
+                     DRAWN_AREA_BACKGROUND_COLOR.1,
+                     DRAWN_AREA_BACKGROUND_COLOR.2);
     c.fill_preserve();
     // Fill target area with patch data.
     c.set_source_surface(&patch_surface,
