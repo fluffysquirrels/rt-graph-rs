@@ -2,7 +2,6 @@
 
 ## Bugs
 * Making the window wider should keep the scrollbar as the same width as the graph.
-* Aliasing artifacts while scrolling: scroll to whole pixels.
 
 ## Features
 * Event listeners on Graph: scroll, follow, zoom, click.

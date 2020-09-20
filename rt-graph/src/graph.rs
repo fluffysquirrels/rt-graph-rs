@@ -269,10 +269,12 @@ impl Graph {
                 ViewMode::Scrolled
             };
 
-            // TODO: Aliasing artifacts while scrolling: scroll to whole pixels.
-            view.last_t = (new_val as u32 +
-                           ((view.zoom_x * self.s.config.graph_width as f64) as u32))
+            let new_t = (new_val as u32 +
+                         ((view.zoom_x * self.s.config.graph_width as f64) as u32))
                 .min(self.s.store.borrow().last_t());
+            // Snap new_t to a whole pixel.
+            let new_t = (((new_t as f64) / view.zoom_x).floor() * view.zoom_x) as u32;
+            view.last_t = new_t;
             view.last_x = 0;
 
             debug!("scroll_change, v={:?} view={:?}", new_val, view);
