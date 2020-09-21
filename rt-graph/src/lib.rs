@@ -11,6 +11,9 @@ use std::fmt::Debug;
 mod graph;
 pub use graph::{Config, ConfigBuilder, Graph};
 
+mod observable_value;
+pub use observable_value::ObservableValue;
+
 mod signal;
 pub use signal::Signal;
 
