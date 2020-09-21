@@ -1,6 +1,13 @@
+/// Implements a broadcast-listener / callback / observable pattern.
+///
+/// `Signal` holds a list of subscriptions, each with a callback closure to run
+/// on the next broadcast.
+///
+/// As `rt-graph` uses GTK, the terminology (`Signal` struct and its method names) match
+/// GTK's terms.
 pub struct Signal<T: Clone> {
     subs: Vec<Subscription<T>>,
-    new_id: SubscriptionId,
+    new_id: usize,
 }
 
 struct Subscription<T> {
@@ -8,7 +15,8 @@ struct Subscription<T> {
     callback: Box<dyn Fn(T)>,
 }
 
-pub type SubscriptionId = usize;
+#[derive(Clone, Copy, Eq, PartialEq)]
+pub struct SubscriptionId(usize);
 
 impl<T: Clone> Signal<T> {
     pub fn new() -> Signal<T> {
@@ -21,11 +29,11 @@ impl<T: Clone> Signal<T> {
     pub fn connect<F>(&mut self, callback: F) -> SubscriptionId
         where F: (Fn(T)) + 'static
     {
-        let id = self.new_id;
+        let id = SubscriptionId(self.new_id);
         self.new_id += 1;
 
         self.subs.push(Subscription {
-            id: id,
+            id,
             callback: Box::new(callback),
         });
         self.subs.shrink_to_fit();
