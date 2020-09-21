@@ -1,3 +1,8 @@
+use std::{
+    cell::RefCell,
+    rc::Rc,
+};
+
 /// A value that implements the Observer pattern.
 ///
 /// Consumers can connect to receive callbacks when the value changes.
@@ -9,13 +14,13 @@ pub struct ObservableValue<T>
     new_id: usize,
 }
 
+#[derive(Clone, Copy, Eq, PartialEq)]
+pub struct SubscriptionId(usize);
+
 struct Subscription<T> {
     id: SubscriptionId,
     callback: Box<dyn Fn(&T)>
 }
-
-#[derive(Clone, Copy, Eq, PartialEq)]
-pub struct SubscriptionId(usize);
 
 impl<T> ObservableValue<T>
     where T: Clone
@@ -59,6 +64,58 @@ impl<T> ObservableValue<T>
     pub fn disconnect(&mut self, sub_id: SubscriptionId) {
         self.subs.retain(|sub| sub.id != sub_id);
         self.subs.shrink_to_fit();
+    }
+
+    /// Divide this instance into a read half (can listen for updates, but cannot
+    /// write new values) and a write half (can write new values).
+    pub fn split(self) -> (ReadHalf<T>, WriteHalf<T>) {
+        let inner = Rc::new(RefCell::new(self));
+        (
+            ReadHalf {
+                inner: inner.clone(),
+            },
+            WriteHalf {
+                inner: inner
+            }
+        )
+    }
+}
+
+pub struct ReadHalf<T>
+    where T: Clone
+{
+    inner: Rc<RefCell<ObservableValue<T>>>,
+}
+
+pub struct WriteHalf<T>
+    where T: Clone
+{
+    inner: Rc<RefCell<ObservableValue<T>>>,
+}
+
+impl<T> ReadHalf<T>
+    where T: Clone
+{
+    pub fn get(&self) -> T {
+        self.inner.borrow().get().clone()
+    }
+
+    pub fn connect<F>(&mut self, callback: F) -> SubscriptionId
+        where F: (Fn(&T)) + 'static
+    {
+        self.inner.borrow_mut().connect(callback)
+    }
+
+    pub fn disconnect(&mut self, sub_id: SubscriptionId) {
+        self.inner.borrow_mut().disconnect(sub_id)
+    }
+}
+
+impl<T> WriteHalf<T>
+    where T: Clone
+{
+    pub fn set(&mut self, new_value: &T) {
+        self.inner.borrow_mut().set(new_value)
     }
 }
 
@@ -125,5 +182,26 @@ mod test {
         ov.set(&19);
         assert_eq!(mirror_1.get(), 18);
         assert_eq!(mirror_2.get(), 19);
+    }
+
+    #[test]
+    fn split() {
+        let ov = ObservableValue::<u32>::new(17);
+        let (mut r, mut w) = ov.split();
+
+        let mirror: Rc<Cell<u32>> = Rc::new(Cell::new(0));
+
+        let mc = mirror.clone();
+        r.connect(move |val| {
+            mc.set(*val);
+        });
+
+        // Check callback not yet called.
+        assert_eq!(mirror.get(), 0);
+
+        w.set(&18);
+
+        // Check the callback was called with the correct value.
+        assert_eq!(mirror.get(), 18);
     }
 }
