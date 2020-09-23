@@ -10,7 +10,6 @@
 * Daniel has 5 graphs, wants them all in sync.
   * Leave it up to controls at a higher level how to navigate, each graph just has show methods.
   * Or one graph is just the n=1 case, support GraphSet concept with n `DataSource`s
-* Configurable larger points (x or + perhaps). Points should be visible on a 4k screen.
 * Pause button
 * Mouse wheel press to pan
 * Mouse wheel to zoom x

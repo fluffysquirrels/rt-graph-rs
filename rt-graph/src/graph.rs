@@ -83,6 +83,15 @@ pub struct Config {
     /// How many windows width of data to store at maximum zoom out.
     #[builder(default = "100")]
     windows_to_store: u32,
+
+    #[builder(default = "PointStyle::Point")]
+    point_style: PointStyle,
+}
+
+#[derive(Clone, Copy, Debug)]
+pub enum PointStyle {
+    Point,
+    Cross,
 }
 
 impl ConfigBuilder {
@@ -424,7 +433,8 @@ fn redraw_graph(s: &State) {
                      patch_dims.0 /* w */, patch_dims.1 /* h */,
                      x /* x */, 0 /* y */,
                      t0, t1,
-                     0 /* v0 */, std::u16::MAX /* v1 */);
+                     0 /* v0 */, std::u16::MAX /* v1 */,
+                     point_func_select(s.config.point_style));
         view.last_x = (x + patch_dims.0) as u32;
         view.last_t = t1;
         s.view_write.borrow_mut().set(&view);
@@ -495,7 +505,8 @@ fn tick(s: &State) {
                          patch_dims.0 /* w */, patch_dims.1 /* h */,
                          patch_offset_x as usize, 0 /* y */,
                          view.last_t, new_t,
-                         0 /* v0 */, std::u16::MAX /* v1 */);
+                         0 /* v0 */, std::u16::MAX /* v1 */,
+                         point_func_select(s.config.point_style));
 
             view.last_t = new_t;
             view.last_x = (patch_offset_x + patch_dims.0 as u32).min(s.config.graph_width);
@@ -512,26 +523,65 @@ fn render_patch(
     store: &Store, cols: &[Color],
     pw: usize, ph: usize,
     x: usize, y: usize,
-    t0: u32, t1: u32, v0: u16, v1: u16
+    t0: u32, t1: u32, v0: u16, v1: u16,
+    point_func: &dyn Fn(usize, usize, usize, usize, &mut [u8], Color),
 ) {
     let mut patch_bytes = vec![0u8; pw * ph * BYTES_PER_PIXEL];
     render_patch_to_bytes(store, cols, &mut patch_bytes,
                           pw, ph,
                           t0, t1,
-                          v0, v1).unwrap();
+                          v0, v1,
+                          point_func).unwrap();
     copy_patch(surface, patch_bytes,
                pw, ph,
                x, y);
 }
 
+fn point_func_select(s: PointStyle) -> &'static dyn Fn(usize, usize, usize, usize, &mut [u8], Color) {
+    match s {
+        PointStyle::Point => &point_func_point,
+        PointStyle::Cross => &point_func_cross,
+    }
+}
+
+fn point_func_point(x: usize, y: usize, pbw: usize, pbh: usize, pb: &mut [u8], col: Color) {
+    if x < pbw && y < pbh {
+        let i = BYTES_PER_PIXEL * (pbw * y + x);
+        pb[i+0] = col.0; // R
+        pb[i+1] = col.1; // G
+        pb[i+2] = col.2; // B
+        pb[i+3] = 255;   // A
+    }
+}
+
+fn point_func_cross(x: usize, y: usize, pbw: usize, pbh: usize, pb: &mut [u8], col: Color) {
+    let mut pixel = |px: usize, py: usize| {
+        if px < pbw && py < pbh {
+            let i = BYTES_PER_PIXEL * (pbw * py + px);
+            pb[i+0] = col.0; // R
+            pb[i+1] = col.1; // G
+            pb[i+2] = col.2; // B
+            pb[i+3] = 255;   // A
+        }
+    };
+
+    pixel(x-1, y-1);
+    pixel(x+1, y-1);
+    pixel(x  , y  );
+    pixel(x-1, y+1);
+    pixel(x+1, y+1);
+}
+
 fn render_patch_to_bytes(
     store: &Store, cols: &[Color],
     pb: &mut [u8], pbw: usize, pbh: usize,
-    t0: u32, t1: u32, v0: u16, v1: u16
-) -> Result<()> {
-
+    t0: u32, t1: u32, v0: u16, v1: u16,
+    point_func: &dyn Fn(usize, usize, usize, usize, &mut [u8], Color),
+) -> Result<()>
+{
     trace!("render_patch_to_bytes: pbw={}", pbw);
     assert!(pbw >= 1);
+
     let points = store.query_range(t0, t1)?;
     for p in points {
         assert!(p.t >= t0 && p.t <= t1);
@@ -549,6 +599,8 @@ fn render_patch_to_bytes(
                 // Skip points that are outside our render patch.
                 continue;
             }
+
+            point_func(x, y, pbw, pbh, pb, col);
 
             let i = BYTES_PER_PIXEL * (pbw * y + x);
             pb[i+0] = col.0; // R
