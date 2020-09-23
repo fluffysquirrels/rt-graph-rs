@@ -1,9 +1,9 @@
-use crate::{Color, DataSource, Point, Result, Store};
+use crate::{Color, DataSource, observable_value, Point, Result, Store};
 use gdk::prelude::*;
 use glib::source::Continue;
 use gtk::prelude::*;
 use std::{
-    cell::{Cell, RefCell},
+    cell::{Cell, RefCell, RefMut},
     rc::Rc,
     time::Instant,
 };
@@ -25,7 +25,8 @@ struct State {
     btn_zoom_x_in: gtk::Button,
     btn_follow: gtk::Button,
 
-    view: RefCell<View>,
+    view_write: RefCell<observable_value::WriteHalf<View>>,
+    view_read: RefCell<observable_value::ReadHalf<View>>,
 
     fps_count: Cell<u16>,
     fps_timer: Cell<Instant>,
@@ -33,8 +34,8 @@ struct State {
     config: Config,
 }
 
-#[derive(Debug)]
-struct View {
+#[derive(Clone, Debug)]
+pub struct View {
     /// Zoom level, in units of t per x pixel
     zoom_x: f64,
     last_t: u32,
@@ -42,8 +43,8 @@ struct View {
     mode: ViewMode,
 }
 
-#[derive(Debug, Eq, PartialEq)]
-enum ViewMode {
+#[derive(Clone, Debug, Eq, PartialEq)]
+pub enum ViewMode {
     Following,
     Scrolled,
 }
@@ -99,8 +100,6 @@ impl Graph {
     pub fn build_ui<C>(config: Config, container: &C, gdk_window: &gdk::Window) -> Graph
         where C: IsA<gtk::Container> + IsA<gtk::Widget>
     {
-        let view = View::default_from_config(&config);
-
         let win_box = gtk::BoxBuilder::new()
             .orientation(gtk::Orientation::Vertical)
             .spacing(0)
@@ -147,6 +146,9 @@ impl Graph {
         let temp_surface = create_backing_surface(gdk_window,
                                                   config.graph_width, config.graph_height);
         let store = Store::new(config.data_source.borrow().get_num_values().unwrap() as u8);
+        let view = View::default_from_config(&config);
+        let (view_read, view_write) =
+            observable_value::ObservableValue::new(view).split();
         let s = Rc::new(State {
             backing_surface: RefCell::new(backing_surface),
             temp_surface: RefCell::new(temp_surface),
@@ -160,7 +162,8 @@ impl Graph {
             btn_zoom_x_in: btn_zoom_x_in.clone(),
             btn_follow: btn_follow.clone(),
 
-            view: RefCell::new(view),
+            view_read: RefCell::new(view_read),
+            view_write: RefCell::new(view_write),
 
             fps_count: Cell::new(0),
             fps_timer: Cell::new(Instant::now()),
@@ -210,13 +213,13 @@ impl Graph {
 
         let gc = graph.clone();
         btn_zoom_x_in.connect_clicked(move |_btn| {
-            let new = gc.s.view.borrow().zoom_x / 2.0;
+            let new = gc.s.view_read.borrow().get().zoom_x / 2.0;
             gc.set_zoom_x(new);
         });
 
         let gc = graph.clone();
         btn_zoom_x_out.connect_clicked(move |_btn| {
-            let new = gc.s.view.borrow().zoom_x * 2.0;
+            let new = gc.s.view_read.borrow().get().zoom_x * 2.0;
             gc.set_zoom_x(new);
         });
 
@@ -238,8 +241,11 @@ impl Graph {
             .max(self.s.config.max_zoom_x);
         {
             // Scope the mutable borrow of view.
-            let mut view = self.s.view.borrow_mut();
-            view.zoom_x = new_zoom_x;
+            let new_view = View {
+                zoom_x: new_zoom_x,
+                .. self.s.view_read.borrow().get()
+            };
+            self.s.view_write.borrow_mut().set(&new_view);
         }
         update_controls(&*self.s);
 
@@ -250,10 +256,13 @@ impl Graph {
         debug!("set_follow");
         {
             // Scope the mutable borrow of view.
-            let mut view = self.s.view.borrow_mut();
-            view.mode = ViewMode::Following;
-            view.last_t = self.s.store.borrow().last_t();
-            self.s.scrollbar.set_value(view.last_t as f64);
+            let new_view = View {
+                mode: ViewMode::Following,
+                last_t: self.s.store.borrow().last_t(),
+                .. self.s.view_read.borrow().get()
+            };
+            self.s.view_write.borrow_mut().set(&new_view);
+            self.s.scrollbar.set_value(new_view.last_t as f64);
         }
         update_controls(&*self.s);
         redraw_graph(&*self.s);
@@ -262,7 +271,7 @@ impl Graph {
     pub fn scroll(&self, new_val: f64) {
         {
             // Scope the borrow_mut on view
-            let mut view = self.s.view.borrow_mut();
+            let mut view = self.s.view_read.borrow().get();
             view.mode = if new_val >= self.s.scrollbar.get_adjustment().get_upper() - 1.0 {
                 ViewMode::Following
             } else {
@@ -276,18 +285,22 @@ impl Graph {
             let new_t = (((new_t as f64) / view.zoom_x).floor() * view.zoom_x) as u32;
             view.last_t = new_t;
             view.last_x = 0;
-
+            self.s.view_write.borrow_mut().set(&view);
             debug!("scroll_change, v={:?} view={:?}", new_val, view);
         }
         update_controls(&self.s);
         // TODO: Maybe keep the section of the graph that's still valid when scrolling.
         redraw_graph(&self.s);
     }
+
+    pub fn view_observable(&mut self) -> RefMut<observable_value::ReadHalf<View>> {
+        self.s.view_read.borrow_mut()
+    }
 }
 
 /// Update the controls (GTK widgets) from the current state.
 fn update_controls(s: &State) {
-    let view = s.view.borrow();
+    let view = s.view_read.borrow().get();
     let adj = s.scrollbar.get_adjustment();
     let window_width_t = (s.config.graph_width as f64) * view.zoom_x;
 
@@ -310,7 +323,7 @@ fn update_controls(s: &State) {
 
 fn graph_click(s: &State, ev: &gdk::EventButton) -> Inhibit {
     let pos = ev.get_position();
-    let view = s.view.borrow();
+    let view = s.view_read.borrow().get();
     let t = (view.last_t as i64 +
              ((pos.0 - (view.last_x as f64)) * view.zoom_x) as i64)
              .max(0).min(view.last_t as i64)
@@ -393,7 +406,7 @@ fn redraw_graph(s: &State) {
         c.fill();
     }
 
-    let mut view = s.view.borrow_mut();
+    let mut view = s.view_read.borrow().get();
     let cols = s.config.data_source.borrow().get_colors().unwrap();
     let t1: u32 = view.last_t;
     let t0: u32 = (t1 as i64 - (s.config.graph_width as f64 * view.zoom_x) as i64).max(0) as u32;
@@ -414,6 +427,7 @@ fn redraw_graph(s: &State) {
                      0 /* v0 */, std::u16::MAX /* v1 */);
         view.last_x = (x + patch_dims.0) as u32;
         view.last_t = t1;
+        s.view_write.borrow_mut().set(&view);
     }
     s.graph_drawing_area.queue_draw();
 }
@@ -437,7 +451,7 @@ fn tick(s: &State) {
 
     update_controls(s);
 
-    let mut view = s.view.borrow_mut();
+    let mut view = s.view_read.borrow().get();
 
     if new_data.len() > 0 && (view.mode == ViewMode::Following ||
                               (view.mode == ViewMode::Scrolled && view.last_x < s.config.graph_width)) {
@@ -485,6 +499,7 @@ fn tick(s: &State) {
 
             view.last_t = new_t;
             view.last_x = (patch_offset_x + patch_dims.0 as u32).min(s.config.graph_width);
+            s.view_write.borrow_mut().set(&view);
         }
 
         // Invalidate the graph widget so we get a draw request.

@@ -1,5 +1,5 @@
-// #[macro_use]
-// extern crate log;
+#[macro_use]
+extern crate log;
 
 use gio::prelude::*;
 use gtk::prelude::*;
@@ -30,7 +30,7 @@ fn build_ui(application: &gtk::Application) {
         .window_position(gtk::WindowPosition::Center)
         .build();
 
-    // Show the window so we can get a gdk::window below.
+    // Show the (gtk) window so we can get a gdk::window below.
     window.show();
     let gdk_window = window.get_window().unwrap();
 
@@ -38,7 +38,14 @@ fn build_ui(application: &gtk::Application) {
         .data_source(TestDataGenerator::new())
         .build()
         .unwrap();
-    let _g = Graph::build_ui(config, &window, &gdk_window);
+    let mut g = Graph::build_ui(config, &window, &gdk_window);
 
+    // An example usage of one of the observables to monitor the graph.
+    {
+        // Scope the borrow from view_observable()
+        g.view_observable().connect(|view| {
+            trace!("view updated: {:?}", view);
+        });
+    }
     window.show_all();
 }
