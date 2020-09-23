@@ -30,7 +30,7 @@ impl<T: Clone> Signal<T> {
         where F: (Fn(T)) + 'static
     {
         let id = SubscriptionId(self.new_id);
-        self.new_id += 1;
+        self.new_id = self.new_id.checked_add(1).expect("No overflow");
 
         self.subs.push(Subscription {
             id,
