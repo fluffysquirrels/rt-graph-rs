@@ -196,7 +196,7 @@ impl Graph {
         let sc = s.clone();
         drawing_area.add_events(gdk::EventMask::BUTTON_PRESS_MASK);
         drawing_area.connect_button_press_event(move |_ctrl, ev| {
-            graph_click(&*sc, ev)
+            graph_button_press(&*sc, ev)
         });
         // drawing_area.add_events(gdk::EventMask::POINTER_MOTION_MASK);
         // drawing_area.connect_motion_notify_event(move |ctrl, ev| {
@@ -332,7 +332,8 @@ fn update_controls(s: &State) {
     s.btn_follow.set_sensitive(view.mode == ViewMode::Scrolled);
 }
 
-fn graph_click(s: &State, ev: &gdk::EventButton) -> Inhibit {
+fn graph_button_press(s: &State, ev: &gdk::EventButton) -> Inhibit {
+    debug!("graph_button_press ev.button={} .state={:?}", ev.get_button(), ev.get_state());
     let pos = ev.get_position();
     let view = s.view_read.borrow().get();
     let t = (view.last_t as i64 +
