@@ -8,6 +8,7 @@ repository = "https://github.com/fluffysquirrels/rt-graph-rs/"
 license = "MIT"
 categories = ["graphics", "gui", "visualization"]
 keywords = ["graphics", "graph", "plotting", "visualization"]
+readme = "README.md"
 
 [dependencies]
 cairo-rs = "0.9.1"

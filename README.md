@@ -2,6 +2,8 @@
 
 A real-time graphing experiment written in Rust.
 
+![Screenshot](docs/example-simple_screenshot.png)
+
 Many other graphing tools do not efficiently update the display when
 new data is added, for example redrawing the whole screen when only a
 few pixels of new data are added.
@@ -23,7 +25,7 @@ Documentation: <https://docs.rs/rt-graph>
 
 Crate: <https://crates.io/crates/rt-graph>
 
-## To run
+## Prerequisites
 
 First install GTK 3 dependencies.
 
@@ -31,12 +33,22 @@ On OS X with brew try: `brew install gtk+3`
 
 On Ubuntu try: `sudo apt-get install libgtk-3-dev`
 
-Then try to run an example with some simulated data:
+## Run the example
+
+Clone the source repository from
+<https://github.com/fluffysquirrels/rt-graph-rs/> then try to run an
+example with some simulated data:
 
 ```
-cd ${REPO}/rt-graph
 cargo run --package "example-simple" --release
 ```
+
+You can scroll back and forth with the scrollbar under the graph, or
+go back to following the latest data by clicking the "Follow" button,
+and zoom in and out with the buttons. Click on the graph to show an
+information bar underneath it with the raw data where you clicked.
+
+## Build your own application
 
 To use your own data implement the `DataSource` trait and pass an instance of your
 struct to the `ConfigBuilder::data_source()` method while building a `Graph`.
