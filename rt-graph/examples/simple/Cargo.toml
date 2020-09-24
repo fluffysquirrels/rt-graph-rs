@@ -1,12 +1,11 @@
 [package]
-name = "example-gtk"
+name = "example-simple"
 version = "0.1.0"
 authors = []
 edition = "2018"
 publish = false
 
 [dependencies]
-cairo-rs = "0.9.1"
 env_logger = "0.7"
 gdk = "0.13.2"
 gio = "0.9.1"

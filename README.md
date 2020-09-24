@@ -28,7 +28,7 @@ Then try an example with some simulated data:
 
 ```
 cd ${REPO}/rt-graph
-cargo run --package "example-gtk" --release
+cargo run --package "example-simple" --release
 ```
 
 To use your own data implement the `DataSource` trait and pass an instance of your

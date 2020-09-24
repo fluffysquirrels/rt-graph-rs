@@ -5,7 +5,6 @@
 ## Features
 * Publish to Reddit, Rust forum.
 * Axes, legend
-* Rename example-gtk.
 * Event listeners on Graph: scroll, follow, zoom, click.
 * Methods on Graph: others? show_point?
 * Daniel has 5 graphs, wants them all in sync.

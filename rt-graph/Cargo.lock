@@ -176,10 +176,9 @@ dependencies = [
 ]
 
 [[package]]
-name = "example-gtk"
+name = "example-simple"
 version = "0.1.0"
 dependencies = [
- "cairo-rs",
  "env_logger",
  "gdk",
  "gio",
