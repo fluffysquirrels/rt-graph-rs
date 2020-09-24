@@ -1,7 +1,6 @@
 # TODO
 
 ## Bugs
-* Making the window wider should keep the scrollbar as the same width as the graph.
 
 ## Features
 * Rename example-gtk.

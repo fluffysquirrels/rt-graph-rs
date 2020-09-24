@@ -123,7 +123,9 @@ impl Graph {
 
         let scroll = gtk::ScrollbarBuilder::new()
             .orientation(gtk::Orientation::Horizontal)
+            .halign(gtk::Align::Start)
             .build();
+        scroll.set_property_width_request(config.graph_width as i32);
         win_box.add(&scroll);
 
         let buttons_box = gtk::BoxBuilder::new()
