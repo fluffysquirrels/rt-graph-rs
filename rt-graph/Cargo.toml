@@ -1,8 +1,13 @@
 [package]
 name = "rt-graph"
+description = "A real-time graphing experiment written in Rust."
 version = "0.1.0"
 authors = ["Alex Helfet <alex.helfet@gmail.com>"]
 edition = "2018"
+repository = "https://github.com/fluffysquirrels/rt-graph-rs/"
+license = "MIT"
+categories = ["graphics", "gui", "visualization"]
+keywords = ["graphics", "graph", "plotting", "visualization"]
 
 [dependencies]
 cairo-rs = "0.9.1"
