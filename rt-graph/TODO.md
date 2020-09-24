@@ -24,10 +24,12 @@
 ## Notes
 
 ```
+/// Scale value linearly from [0,1] to [min,max]
 fn map_to_range(value: f32, min: f32, max: f32) -> f32 {
     value * (max - min) + min
 }
 
+/// Scale value linearly from [min, max] to [0,1]
 fn normalize(value: f32, min: f32, max: f32) -> f32 {
     let delta = max - min;
     assert!(delta != 0.);
