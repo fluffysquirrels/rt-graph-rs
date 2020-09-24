@@ -62,3 +62,9 @@ bindings) for its UI and is designed to be embedded into any
 GTK 3 documentation:  <https://developer.gnome.org/gtk3/stable/index.html>
 
 gtk-rs (Rust GTK bindings) documentation: <https://gtk-rs.org/docs-src/>
+
+## Changelog
+
+### 0.1.1
+
+Add more content to the README, including a screenshot.
