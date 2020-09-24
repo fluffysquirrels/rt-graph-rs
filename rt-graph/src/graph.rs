@@ -466,14 +466,17 @@ fn tick(s: &State) {
     let mut view = s.view_read.borrow().get();
 
     if new_data.len() > 0 && (view.mode == ViewMode::Following ||
-                              (view.mode == ViewMode::Scrolled && view.last_x < s.config.graph_width)) {
+                              (view.mode == ViewMode::Scrolled &&
+                               view.last_x < s.config.graph_width)) {
         // Draw the new data.
 
         // Calculate the size of the latest patch to render.
         // TODO: Handle when patch_dims.0 >= s.config.graph_width.
         // TODO: Handle scrolled when new data is offscreen (don't draw)
         let patch_dims =
-            (((t_latest - view.last_t) as f64 / view.zoom_x).floor() as usize,
+            ((((t_latest - view.last_t) as f64 / view.zoom_x)
+               .floor() as usize)
+               .min(s.config.graph_width as usize),
              s.config.graph_height as usize);
         // If there is more than a pixel's worth of data to render since we last drew,
         // then draw it.
@@ -528,6 +531,7 @@ fn render_patch(
     t0: u32, t1: u32, v0: u16, v1: u16,
     point_func: &dyn Fn(usize, usize, usize, usize, &mut [u8], Color),
 ) {
+    trace!("render_patch: pw={}, ph={} x={} y={}", pw, ph, x, y);
     let mut patch_bytes = vec![0u8; pw * ph * BYTES_PER_PIXEL];
     render_patch_to_bytes(store, cols, &mut patch_bytes,
                           pw, ph,
