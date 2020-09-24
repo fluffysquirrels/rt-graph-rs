@@ -31,7 +31,7 @@ cd ${REPO}/rt-graph
 cargo run --package "example-gtk" --release
 ```
 
-To use your own data implement the DataSource trait and pass an instance of your
+To use your own data implement the `DataSource` trait and pass an instance of your
 struct to the `ConfigBuilder::data_source()` method while building a `Graph`.
 
 ## Helpful links
