@@ -33,7 +33,7 @@ On OS X with brew try: `brew install gtk+3`
 
 On Ubuntu try: `sudo apt-get install libgtk-3-dev`
 
-## Run the example
+## Run an example
 
 Clone the source repository from
 <https://github.com/fluffysquirrels/rt-graph-rs/> then try to run an
