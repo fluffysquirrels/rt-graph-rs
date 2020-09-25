@@ -65,6 +65,10 @@ gtk-rs (Rust GTK bindings) documentation: <https://gtk-rs.org/docs-src/>
 
 ## Changelog
 
+### 0.2.0 (UNRELEASED)
+
+Refactor out Graph, GraphWithControls, so consumers can write their own controls.
+
 ### 0.1.1
 
 Add more content to the README, including a screenshot.
