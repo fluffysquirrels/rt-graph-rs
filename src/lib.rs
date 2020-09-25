@@ -9,7 +9,10 @@ extern crate log;
 use std::fmt::Debug;
 
 mod graph;
-pub use graph::{Config, ConfigBuilder, Graph, PointStyle};
+pub use graph::{Config, ConfigBuilder, Graph, PointStyle, View, ViewMode};
+
+mod graph_with_controls;
+pub use graph_with_controls::GraphWithControls;
 
 pub mod observable_value;
 

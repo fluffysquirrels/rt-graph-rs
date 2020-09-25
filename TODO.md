@@ -3,6 +3,7 @@
 ## Bugs
 
 ## Features
+* Refactor graph click behaviour to GraphWithControls.
 * Example with a non-blocking / fast DataSource
 * Example with a blocking DataSource that runs in another thread and ships data over a channel.
 * Example with multiple graphs.

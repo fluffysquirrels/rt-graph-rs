@@ -1,9 +1,6 @@
-#[macro_use]
-extern crate log;
-
 use gio::prelude::*;
 use gtk::prelude::*;
-use rt_graph::{ConfigBuilder, Graph, TestDataGenerator};
+use rt_graph::{ConfigBuilder, GraphWithControls, TestDataGenerator};
 use std::{
     env::args,
 };
@@ -38,14 +35,6 @@ fn build_ui(application: &gtk::Application) {
         .data_source(TestDataGenerator::new())
         .build()
         .unwrap();
-    let mut g = Graph::build_ui(config, &window, &gdk_window);
-
-    // An example usage of one of the observables to monitor the graph.
-    {
-        // Scope the borrow from view_observable()
-        g.view_observable().connect(|view| {
-            trace!("view updated: {:?}", view);
-        });
-    }
+    let mut _g = GraphWithControls::build_ui(config, &window, &gdk_window);
     window.show_all();
 }
