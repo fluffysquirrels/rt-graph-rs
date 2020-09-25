@@ -4,11 +4,12 @@
 
 ## Features
 * Refactor graph click behaviour to GraphWithControls.
+* Newtype for Time(u32)
+* Document public types
 * Example with a non-blocking / fast DataSource
 * Example with a blocking DataSource that runs in another thread and ships data over a channel.
 * Example with multiple graphs.
 * Example with multiple graphs in sync.
-* Option to show the graph with and without controls
 * Axes, legend
 * Event listeners on Graph: scroll, follow, zoom, _click_.
 * When you click on the graph it would be nice to have feedback as to
@@ -21,13 +22,15 @@
 * Mouse wheel press to pan
 * Mouse wheel to zoom x
 * Alt left mouse to zoom box
-* Embeddable panel
+* Export a GLib / GObject interface for consumption by other languages than Rust.
 * Scale and offset data (auto-fit to y?)
 * Probably use f32 for point data
 * Maybe hovering over the graph should show the current point value in a tooltip or sub-window
 * Resizing the window should resize the graph.
 * Maybe keep the section of the graph that's still valid when scrolling.
 * Lower CPU usage when hidden (e.g. minimised). Don't bother drawing.
+* Profile
+* Web port / rewrite?
 
 ## Notes
 
