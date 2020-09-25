@@ -159,7 +159,7 @@ impl Graph {
         let store = Store::new(config.data_source.borrow().get_num_values().unwrap() as u8);
         let view = View::default_from_config(&config);
         let (view_read, view_write) =
-            observable_value::ObservableValue::new(view).split();
+            observable_value::ObservableValue::new(view.clone()).split();
         let s = Rc::new(State {
             backing_surface: RefCell::new(backing_surface),
             temp_surface: RefCell::new(temp_surface),
@@ -185,7 +185,7 @@ impl Graph {
             s: s.clone(),
         };
 
-        update_controls(&*s);
+        update_controls(&*s, &view);
 
         // Set signal handlers that require State
         let sc = s.clone();
@@ -234,6 +234,13 @@ impl Graph {
             gc.set_zoom_x(new);
         });
 
+        {
+            // Scope the borrow on view_read.
+            let gc = graph.clone();
+            s.view_read.borrow_mut().connect(move |view| {
+                update_controls(&gc.s, &view);
+            });
+        }
         // Show everything recursively
         win_box.show_all();
 
@@ -258,7 +265,6 @@ impl Graph {
             };
             self.s.view_write.borrow_mut().set(&new_view);
         }
-        update_controls(&*self.s);
 
         redraw_graph(&*self.s);
     }
@@ -275,7 +281,6 @@ impl Graph {
             self.s.view_write.borrow_mut().set(&new_view);
             self.s.scrollbar.set_value(new_view.last_t as f64);
         }
-        update_controls(&*self.s);
         redraw_graph(&*self.s);
     }
 
@@ -299,7 +304,6 @@ impl Graph {
             self.s.view_write.borrow_mut().set(&view);
             debug!("scroll_change, v={:?} view={:?}", new_val, view);
         }
-        update_controls(&self.s);
         // TODO: Maybe keep the section of the graph that's still valid when scrolling.
         redraw_graph(&self.s);
     }
@@ -310,8 +314,7 @@ impl Graph {
 }
 
 /// Update the controls (GTK widgets) from the current state.
-fn update_controls(s: &State) {
-    let view = s.view_read.borrow().get();
+fn update_controls(s: &State, view: &View) {
     let adj = s.scrollbar.get_adjustment();
     let window_width_t = (s.config.graph_width as f64) * view.zoom_x;
 
@@ -461,8 +464,6 @@ fn tick(s: &State) {
     if discard_start > 0 {
         s.store.borrow_mut().discard(0, discard_start).unwrap();
     }
-
-    update_controls(s);
 
     let mut view = s.view_read.borrow().get();
 
