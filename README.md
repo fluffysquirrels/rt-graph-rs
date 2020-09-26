@@ -50,8 +50,9 @@ information bar underneath it with the raw data where you clicked.
 
 ## Build your own application
 
-To use your own data implement the `DataSource` trait and pass an instance of your
-struct to the `ConfigBuilder::data_source()` method while building a `Graph`.
+To use your own data implement the `DataSource` trait and pass an
+instance of your struct to the `ConfigBuilder::data_source()` method
+while building a `Graph` or `GraphWithControls`.
 
 `rt-graph` uses GTK (via the [gtk-rs](https://gtk-rs.org/) Rust
 bindings) for its UI and is designed to be embedded into any
@@ -65,7 +66,7 @@ gtk-rs (Rust GTK bindings) documentation: <https://gtk-rs.org/docs-src/>
 
 ## Changelog
 
-### 0.2.0 (UNRELEASED)
+### 0.2.0
 
 Refactor out Graph, GraphWithControls, so consumers can write their own controls.
 
