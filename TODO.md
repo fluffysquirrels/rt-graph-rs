@@ -3,7 +3,6 @@
 ## Bugs
 
 ## Features
-* Refactor graph click behaviour to GraphWithControls.
 * Newtype for Time(u32)
 * Document public types
 * Example with a non-blocking / fast DataSource
@@ -11,10 +10,8 @@
 * Example with multiple graphs.
 * Example with multiple graphs in sync.
 * Axes, legend
-* Event listeners on Graph: scroll, follow, zoom, _click_.
 * When you click on the graph it would be nice to have feedback as to
   where you clicked in the graph.
-* Methods on Graph: others? show_point?
 * Daniel has 5 graphs, wants them all in sync
   * Leave it up to controls at a higher level how to navigate, each graph just has show methods.
   * Or one graph is just the n=1 case, support GraphSet concept with n `DataSource`s
