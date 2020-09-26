@@ -18,8 +18,7 @@ struct State {
 
     store: RefCell<Store>,
 
-    win_box: gtk::Box,
-    graph_drawing_area: gtk::DrawingArea,
+    drawing_area: gtk::DrawingArea,
 
     view_write: RefCell<observable_value::WriteHalf<View>>,
     view_read: RefCell<observable_value::ReadHalf<View>>,
@@ -109,17 +108,12 @@ impl Graph {
     pub fn build_ui<C>(config: Config, container: &C, gdk_window: &gdk::Window) -> Graph
         where C: IsA<gtk::Container> + IsA<gtk::Widget>
     {
-        let win_box = gtk::BoxBuilder::new()
-            .orientation(gtk::Orientation::Vertical)
-            .spacing(0)
-            .build();
-        container.add(&win_box);
 
         let drawing_area = gtk::DrawingAreaBuilder::new()
             .height_request(config.graph_height as i32)
             .width_request(config.graph_width as i32)
             .build();
-        win_box.add(&drawing_area);
+        container.add(&drawing_area);
 
         // Initialise State
 
@@ -137,8 +131,7 @@ impl Graph {
 
             store: RefCell::new(store),
 
-            win_box: win_box.clone(),
-            graph_drawing_area: drawing_area.clone(),
+            drawing_area: drawing_area.clone(),
 
             view_read: RefCell::new(view_read),
             view_write: RefCell::new(view_write),
@@ -158,26 +151,15 @@ impl Graph {
             graph_draw(ctrl, ctx, &*sc)
         });
 
-        let sc = s.clone();
-        drawing_area.add_events(gdk::EventMask::BUTTON_PRESS_MASK);
-        drawing_area.connect_button_press_event(move |_ctrl, ev| {
-            graph_button_press(&*sc, ev)
-        });
-        // drawing_area.add_events(gdk::EventMask::POINTER_MOTION_MASK);
-        // drawing_area.connect_motion_notify_event(move |ctrl, ev| {
-        //     debug!("drawing_area_mouse_move ev.pos={:?}", ev.get_position());
-        //     Inhibit(false)
-        // });
-
         // Register our tick timer.
         let sc = s.clone();
-        let _tick_id = win_box.add_tick_callback(move |_ctrl, _clock| {
+        let _tick_id = drawing_area.add_tick_callback(move |_ctrl, _clock| {
             tick(&*sc);
             Continue(true)
         });
 
         // Show everything recursively
-        win_box.show_all();
+        drawing_area.show_all();
 
         graph
     }
@@ -269,57 +251,29 @@ impl Graph {
     pub fn view_observable(&mut self) -> RefMut<observable_value::ReadHalf<View>> {
         self.s.view_read.borrow_mut()
     }
-}
 
-fn graph_button_press(s: &State, ev: &gdk::EventButton) -> Inhibit {
-    debug!("graph_button_press ev.button={} .state={:?}", ev.get_button(), ev.get_state());
-    let pos = ev.get_position();
-    let view = s.view_read.borrow().get();
-    let t = (view.last_drawn_t as i64 +
-             ((pos.0 - (view.last_drawn_x as f64)) * view.zoom_x) as i64)
-             .max(0).min(view.last_drawn_t as i64)
-        as u32;
-    let pt = s.store.borrow().query_point(t).unwrap();
-
-    // If we are getting a point >= 10 pixels away, return None instead.
-    // This can happen when old data has been discarded but is still on screen.
-    let pt: Option<Point> = if (pt.as_ref().unwrap().t - t) >= (view.zoom_x * 10.0) as u32 {
-        None
-    } else {
-        pt
-    };
-    debug!("graph_button_press pos={:?} last_drawn_t={} last_drawn_x={}",
-           pos, view.last_drawn_t, view.last_drawn_x);
-    debug!("graph_button_press t={} pt={:?}", t, pt);
-
-    if let Some(pta) = pt {
-        let info_bar = gtk::InfoBarBuilder::new()
-            .build();
-        s.win_box.add(&info_bar);
-        info_bar.get_content_area().add(&gtk::Label::new(Some("t, vs:")));
-
-        let entry = gtk::EntryBuilder::new()
-            .text(&*format!("{}, {:?}", pta.t, pta.vals()))
-            .editable(false)
-            .hexpand(true)
-            .build();
-        info_bar.get_content_area().add(&entry);
-
-        let close_btn = gtk::ButtonBuilder::new()
-            .label("Close")
-            .build();
-        info_bar.get_action_area().unwrap().add(&close_btn);
-
-        let ibc = info_bar.clone();
-        let wbc = s.win_box.clone();
-        close_btn.connect_clicked(move |_btn| {
-            wbc.remove(&ibc);
-        });
-
-        info_bar.show_all();
+    pub fn drawing_area(&self) -> gtk::DrawingArea {
+        self.s.drawing_area.clone()
     }
 
-    Inhibit(false)
+    pub fn drawing_area_pos_to_point(&self, x: f64, _y: f64) -> Option<Point> {
+        let view = self.s.view_read.borrow().get();
+        let t = (view.last_drawn_t as i64 +
+                 ((x - (view.last_drawn_x as f64)) * view.zoom_x) as i64)
+            .max(0).min(view.last_drawn_t as i64)
+            as u32;
+        let pt = self.s.store.borrow().query_point(t).unwrap();
+
+        // If we are getting a point >= 10 pixels away, return None instead.
+        // This can happen when old data has been discarded but is still on screen.
+        let pt: Option<Point> = if (pt.as_ref().unwrap().t - t) >= (view.zoom_x * 10.0) as u32 {
+            None
+        } else {
+            pt
+        };
+
+        pt
+    }
 }
 
 /// Handle the graph's draw signal.
@@ -382,7 +336,7 @@ fn redraw_graph(s: &State) {
         view.last_drawn_t = t1;
         s.view_write.borrow_mut().set(&view);
     }
-    s.graph_drawing_area.queue_draw();
+    s.drawing_area.queue_draw();
 }
 
 fn tick(s: &State) {
@@ -461,7 +415,7 @@ fn tick(s: &State) {
         }
 
         // Invalidate the graph widget so we get a draw request.
-        s.graph_drawing_area.queue_draw();
+        s.drawing_area.queue_draw();
     }
 }
 

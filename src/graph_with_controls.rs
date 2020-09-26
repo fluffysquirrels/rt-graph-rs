@@ -8,6 +8,8 @@ pub struct GraphWithControls {
 }
 
 struct State {
+    controls_box: gtk::Box,
+
     scrollbar: gtk::Scrollbar,
     btn_zoom_x_out: gtk::Button,
     btn_zoom_x_in: gtk::Button,
@@ -63,6 +65,8 @@ impl GraphWithControls {
         // Set up the state
 
         let s = Rc::new(State {
+            controls_box: controls_box.clone(),
+
             scrollbar: scrollbar.clone(),
             btn_zoom_x_out: btn_zoom_x_out.clone(),
             btn_zoom_x_in: btn_zoom_x_in.clone(),
@@ -108,6 +112,13 @@ impl GraphWithControls {
                 update_controls(&gc, &view);
             });
         }
+
+        let gc = g.clone();
+        g.s.graph.borrow().drawing_area().add_events(gdk::EventMask::BUTTON_PRESS_MASK);
+        g.s.graph.borrow().drawing_area().connect_button_press_event(move |_ctrl, ev| {
+            drawing_area_button_press(&gc, ev)
+        });
+
         // Show everything recursively
         controls_box.show_all();
 
@@ -144,4 +155,42 @@ fn update_controls(g: &GraphWithControls, view: &View) {
     s.btn_zoom_x_in.set_sensitive(view.zoom_x > s.graph.borrow().max_zoom_x());
     s.btn_zoom_x_out.set_sensitive(view.zoom_x < s.graph.borrow().base_zoom_x());
     s.btn_follow.set_sensitive(view.mode == ViewMode::Scrolled);
+}
+
+fn drawing_area_button_press(g: &GraphWithControls, ev: &gdk::EventButton) -> Inhibit {
+    let pos = ev.get_position();
+    let pt = g.s.graph.borrow().drawing_area_pos_to_point(pos.0, pos.1);
+    debug!("drawing_area button_press pos={:?} pt={:?}", pos, pt);
+
+    if let Some(pta) = pt {
+        let info_bar = gtk::InfoBarBuilder::new()
+            .halign(gtk::Align::Start)
+            .build();
+        g.s.controls_box.add(&info_bar);
+        info_bar.set_property_width_request(g.s.graph.borrow().width() as i32);
+
+        info_bar.get_content_area().add(&gtk::Label::new(Some("t, vs:")));
+
+        let entry = gtk::EntryBuilder::new()
+            .text(&*format!("{}, {:?}", pta.t, pta.vals()))
+            .editable(false)
+            .hexpand(true)
+            .build();
+        info_bar.get_content_area().add(&entry);
+
+        let close_btn = gtk::ButtonBuilder::new()
+            .label("Close")
+            .build();
+        info_bar.get_action_area().unwrap().add(&close_btn);
+
+        let ibc = info_bar.clone();
+        let cbc = g.s.controls_box.clone();
+        close_btn.connect_clicked(move |_btn| {
+            cbc.remove(&ibc);
+        });
+
+        info_bar.show_all();
+    }
+
+    Inhibit(false)
 }
