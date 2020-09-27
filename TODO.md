@@ -3,7 +3,7 @@
 ## Bugs
 
 ## Features
-* Document public types
+* Scroll values read-out when there are several
 * Example with a non-blocking / fast DataSource
 * Example with a blocking DataSource that runs in another thread and ships data over a channel.
 * Example with multiple graphs.
