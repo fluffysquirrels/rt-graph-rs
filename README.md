@@ -66,6 +66,10 @@ gtk-rs (Rust GTK bindings) documentation: <https://gtk-rs.org/docs-src/>
 
 ## Changelog
 
+### UNRELEASED
+
+Flip y axis so increasing values are higher on the screen.
+
 ### 0.2.0
 
 Refactor out Graph, GraphWithControls, so consumers can write their own controls.
