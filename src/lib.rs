@@ -49,8 +49,47 @@ impl Point {
     }
 }
 
+/// A color in RGB format.
+///
+/// The tuple values are the red, green, and blue components of the
+/// color respectively.
 #[derive(Clone, Copy)]
 pub struct Color(pub u8, pub u8, pub u8);
+
+impl Color {
+    /// Create a color from red, green, and blue components.
+    pub fn from_rgb(r: u8, g: u8, b: u8) -> Color {
+        Color(r, g, b)
+    }
+
+    /// Return the red component of the `Color`.
+    pub fn r(&self) -> u8 {
+        self.0
+    }
+
+    /// Return the green component of the `Color`.
+    pub fn g(&self) -> u8 {
+        self.1
+    }
+
+    /// Return the blue component of the `Color`.
+    pub fn b(&self) -> u8 {
+        self.2
+    }
+}
+
+#[cfg(test)]
+mod color_tests {
+    use super::Color;
+
+    #[test]
+    fn values() {
+        let c = Color::from_rgb(10, 20, 30);
+        assert_eq!(c.r(), 10);
+        assert_eq!(c.g(), 20);
+        assert_eq!(c.b(), 30);
+    }
+}
 
 /// Implement this to get your own data into a `Graph`.
 pub trait DataSource: Debug + Send {
