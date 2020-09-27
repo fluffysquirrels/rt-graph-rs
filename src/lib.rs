@@ -42,19 +42,30 @@ pub enum Error {
 /// Represents either a value or an error from the crate.
 pub type Result<T> = std::result::Result<T, Error>;
 
+/// A point in time when a data point was emitted.
+pub type Time = u32;
+
+/// The value of a data point
+pub type Value = u16;
+
 /// A data point on a graph.
 #[derive(Debug, Clone)]
 pub struct Point {
     /// The time when this data point was emitted.
-    pub t: u32,
+    pub t: Time,
 
     /// The values this point holds.
-    pub vs: Vec<u16>,
+    pub vs: Vec<Value>,
 }
 
 impl Point {
+    /// Return the time when this data point was emitted.
+    pub fn t(&self) -> Time {
+        self.t
+    }
+
     /// Return the values that this point holds.
-    pub fn vals(&self) -> &[u16] {
+    pub fn vals(&self) -> &[Value] {
         &self.vs
     }
 }

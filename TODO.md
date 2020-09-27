@@ -3,7 +3,6 @@
 ## Bugs
 
 ## Features
-* Newtype for Time(u32)
 * Document public types
 * Example with a non-blocking / fast DataSource
 * Example with a blocking DataSource that runs in another thread and ships data over a channel.

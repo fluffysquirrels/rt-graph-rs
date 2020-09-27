@@ -1,10 +1,10 @@
-use crate::{Error, Point, Result};
+use crate::{Error, Point, Result, Time, Value};
 use std::collections::BTreeMap;
 
 pub struct Store {
-    last_t: u32,
+    last_t: Time,
     val_len: u8,
-    all: BTreeMap<u32, Vec<u16>>,
+    all: BTreeMap<Time, Vec<Value>>,
 }
 
 impl Store {
@@ -32,7 +32,7 @@ impl Store {
         Ok(())
     }
 
-    pub fn discard(&mut self, t0: u32, t1: u32) -> Result<()> {
+    pub fn discard(&mut self, t0: Time, t1: Time) -> Result<()> {
         for t in self.all.range(t0..t1).map(|(t,_vs)| *t).collect::<Vec<u32>>() {
             self.all.remove(&t);
         }
@@ -40,7 +40,7 @@ impl Store {
     }
 
     /// Returns a Vec of the points with t >= t0, < t1.
-    pub fn query_range(&self, t0: u32, t1: u32) -> Result<Vec<Point>> {
+    pub fn query_range(&self, t0: Time, t1: Time) -> Result<Vec<Point>> {
         let rv: Vec<Point> =
             self.all.range(t0..t1)
                 .map(|(t,vs)| Point { t: *t, vs: vs.clone() })
@@ -50,18 +50,18 @@ impl Store {
     }
 
     /// Returns the first point with t >= given t.
-    pub fn query_point(&self, t: u32) -> Result<Option<Point>> {
+    pub fn query_point(&self, t: Time) -> Result<Option<Point>> {
         let rv = self.all.range(t..)
                      .map(|(t,vs)| Point { t: *t, vs: vs.clone() })
                      .next();
         Ok(rv)
     }
 
-    pub fn last_t(&self) -> u32 {
+    pub fn last_t(&self) -> Time {
         self.last_t
     }
 
-    pub fn first_t(&self) -> u32 {
+    pub fn first_t(&self) -> Time {
         self.query_point(0).unwrap()
                            .map_or(0, |pt| pt.t)
     }

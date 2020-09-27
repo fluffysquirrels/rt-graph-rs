@@ -71,6 +71,7 @@ gtk-rs (Rust GTK bindings) documentation: <https://gtk-rs.org/docs-src/>
 * Flip y axis so increasing values are higher on the screen.
 * Make `Store` private.
 * Add per-item documentation for all public items.
+* Replace naked `u16` and `u32` usage with type aliases `Value` and `Time`.
 
 ### 0.2.0
 

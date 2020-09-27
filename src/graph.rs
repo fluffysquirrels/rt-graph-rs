@@ -1,4 +1,4 @@
-use crate::{Color, DataSource, observable_value, Point, Result, Store};
+use crate::{Color, DataSource, observable_value, Point, Result, Store, Time, Value};
 use gdk::prelude::*;
 use glib::source::Continue;
 use gtk::prelude::*;
@@ -36,17 +36,17 @@ pub struct View {
     pub zoom_x: f64,
 
     /// The most recently drawn time value.
-    pub last_drawn_t: u32,
+    pub last_drawn_t: Time,
 
     /// The most recently drawn x pixel.
     pub last_drawn_x: u32,
 
     /// The longest ago time value that is still stored. Note
     /// that the oldest data is discarded to keep memory usage bounded.
-    pub min_t: u32,
+    pub min_t: Time,
 
     /// The most recent time value.
-    pub max_t: u32,
+    pub max_t: Time,
 
     /// The display mode.
     pub mode: ViewMode,
@@ -235,13 +235,13 @@ impl Graph {
     }
 
     /// Return the most recent time value.
-    pub fn last_t(&self) -> u32 {
+    pub fn last_t(&self) -> Time {
         self.s.store.borrow().last_t()
     }
 
     /// Return the longest ago time value that is still stored. Note
     /// that the oldest data is discarded to keep memory usage bounded.
-    pub fn first_t(&self) -> u32 {
+    pub fn first_t(&self) -> Time {
         self.s.store.borrow().first_t()
     }
 
@@ -492,7 +492,7 @@ fn render_patch(
     store: &Store, cols: &[Color],
     pw: usize, ph: usize,
     x: usize, y: usize,
-    t0: u32, t1: u32, v0: u16, v1: u16,
+    t0: Time, t1: Time, v0: Value, v1: Value,
     point_func: &dyn Fn(usize, usize, usize, usize, &mut [u8], Color),
 ) {
     trace!("render_patch: pw={}, ph={} x={} y={}", pw, ph, x, y);
@@ -545,7 +545,7 @@ fn point_func_cross(x: usize, y: usize, pbw: usize, pbh: usize, pb: &mut [u8], c
 fn render_patch_to_bytes(
     store: &Store, cols: &[Color],
     pb: &mut [u8], pbw: usize, pbh: usize,
-    t0: u32, t1: u32, v0: u16, v1: u16,
+    t0: Time, t1: Time, v0: Value, v1: Value,
     point_func: &dyn Fn(usize, usize, usize, usize, &mut [u8], Color),
 ) -> Result<()>
 {
