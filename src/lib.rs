@@ -25,11 +25,13 @@ use store::Store;
 mod test_data_generator;
 pub use test_data_generator::TestDataGenerator;
 
+/// Represents an error that could occur using the crate
 #[derive(Debug)]
 pub enum Error {
     String(String),
 }
 
+/// Represents either a value or an error from the crate.
 pub type Result<T> = std::result::Result<T, Error>;
 
 /// A data point on a graph.

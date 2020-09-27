@@ -3,6 +3,10 @@ use gdk::prelude::*;
 use gtk::prelude::*;
 use std::{rc::Rc, cell::RefCell};
 
+/// A GTK widget that contains a graph and controls to navigate it.
+///
+/// If you want a customised graph with your own controls, you might
+/// want to try using `Graph`, which is designed for customisation.
 pub struct GraphWithControls {
     s: Rc<State>,
 }
@@ -19,6 +23,7 @@ struct State {
 }
 
 impl GraphWithControls {
+    /// Build and show a `GraphWithControls` widget in the target `gtk::Container`.
     pub fn build_ui<C>(config: Config, container: &C, gdk_window: &gdk::Window
     ) -> GraphWithControls
         where C: IsA<gtk::Container> + IsA<gtk::Widget>
@@ -144,7 +149,7 @@ fn update_controls(g: &GraphWithControls, view: &View) {
     adj.set_step_increment(window_width_t / 4.0);
     adj.set_page_increment(window_width_t / 2.0);
     adj.set_page_size(window_width_t);
-    // adj.set_value(0.0);
+
     match view.mode {
         ViewMode::Following =>
             adj.set_value(s.graph.borrow().last_t() as f64),

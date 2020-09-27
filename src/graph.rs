@@ -29,6 +29,7 @@ struct State {
     config: Config,
 }
 
+/// Describes what is currently showing on the graph.
 #[derive(Clone, Debug)]
 pub struct View {
     /// Zoom level, in units of t per x pixel
@@ -101,6 +102,7 @@ pub struct Config {
     point_style: PointStyle,
 }
 
+/// The style of point to draw
 #[derive(Clone, Copy, Debug)]
 pub enum PointStyle {
     Point,
@@ -113,6 +115,11 @@ impl ConfigBuilder {
     }
 }
 
+/// A GTK widget that draws a graph.
+///
+/// `Graph` contains no controls to navigate it, you are expected to
+/// provide your own controls using the methods and signals it provides.
+/// Or you can use `GraphWithControls` that comes with a set of controls.
 pub struct Graph {
     s: Rc<State>,
 }
@@ -178,30 +185,40 @@ impl Graph {
         graph
     }
 
+    /// Return the width of the graph
     pub fn width(&self) -> u32 {
         self.s.config.graph_width
     }
 
+    /// Return the height of the graph
     pub fn height(&self) -> u32 {
         self.s.config.graph_height
     }
 
+    /// Return the initial and maximally zoomed out zoom level, in
+    /// units of time per x pixel.
     pub fn base_zoom_x(&self) -> f64 {
         self.s.config.base_zoom_x
     }
 
+    /// Return the maximally zoomed in zoom level, in
+    /// units of time per x pixel.
     pub fn max_zoom_x(&self) -> f64 {
         self.s.config.max_zoom_x
     }
 
+    /// Return a description of the current view
     pub fn view(&self) -> View {
         self.s.view_read.borrow().get()
     }
 
+    /// Return the most recent time value.
     pub fn last_t(&self) -> u32 {
         self.s.store.borrow().last_t()
     }
 
+    /// Return the longest ago time value that is still stored. Note
+    /// that the oldest data is discarded to keep memory usage bounded.
     pub fn first_t(&self) -> u32 {
         self.s.store.borrow().first_t()
     }
@@ -212,6 +229,9 @@ impl Graph {
         }
     }
 
+    /// Change the zoom level on the graph.
+    ///
+    /// Any value you pass in will be clamped between `base_zoom_x` and `max_zoom_x`.
     pub fn set_zoom_x(&self, new_zoom_x: f64) {
         debug!("set_zoom_x new_zoom_x={}", new_zoom_x);
         let new_zoom_x = new_zoom_x.min(self.s.config.base_zoom_x)
@@ -228,6 +248,7 @@ impl Graph {
         redraw_graph(&*self.s);
     }
 
+    /// Sets the graph to follow the latest data.
     pub fn set_follow(&self) {
         debug!("set_follow");
         {
@@ -242,6 +263,7 @@ impl Graph {
         redraw_graph(&*self.s);
     }
 
+    /// Scrolls the graph to view a certain time value.
     pub fn scroll(&self, new_val: f64) {
         debug!("scroll new_val={}", new_val);
         {
@@ -262,14 +284,24 @@ impl Graph {
         redraw_graph(&self.s);
     }
 
+    /// Return an observable that lets you track the current `View`,
+    /// which describes what is currently showing on the graph.
     pub fn view_observable(&mut self) -> RefMut<observable_value::ReadHalf<View>> {
         self.s.view_read.borrow_mut()
     }
 
+    /// Returns the `DrawingArea` gtk widget the graph is drawn on, so
+    /// you can connect to its signals.
     pub fn drawing_area(&self) -> gtk::DrawingArea {
         self.s.drawing_area.clone()
     }
 
+    /// Maps a position on `drawing_area` to the data point that is
+    /// currently drawn there. Useful for handling clicks on the graph.
+    ///
+    /// Returns None if no appropriate point can be found, for example
+    /// if the data point for a scroll position has already been
+    /// discarded.
     pub fn drawing_area_pos_to_point(&self, x: f64, _y: f64) -> Option<Point> {
         let view = self.s.view_read.borrow().get();
         let t = (view.last_drawn_t as i64 +
