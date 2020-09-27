@@ -174,7 +174,7 @@ fn drawing_area_button_press(g: &GraphWithControls, ev: &gdk::EventButton) -> In
         g.s.controls_box.add(&info_bar);
         info_bar.set_property_width_request(g.s.graph.borrow().width() as i32);
 
-        info_bar.get_content_area().add(&gtk::Label::new(Some("t, vs:")));
+        info_bar.get_content_area().add(&gtk::Label::new(Some("Time, [Values]:")));
 
         let entry = gtk::EntryBuilder::new()
             .text(&*format!("{}, {:?}", pta.t, pta.vals()))
