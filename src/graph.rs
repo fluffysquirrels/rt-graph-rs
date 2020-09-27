@@ -59,6 +59,20 @@ impl View {
     }
 }
 
+/// The configuration required by a `Graph` or `GraphWithControls`
+///
+/// Create an instance using a `ConfigBuilder`:
+///
+/// ```
+/// use rt_graph::{Config, ConfigBuilder, TestDataGenerator};
+///
+/// let config: Config =
+///     ConfigBuilder::default()
+///         // Chain ConfigBuilder methods here
+///         .data_source(TestDataGenerator::new())
+///         .build()
+///         .unwrap();
+/// ```
 #[derive(Builder, Debug)]
 #[builder(pattern = "owned")]
 pub struct Config {
