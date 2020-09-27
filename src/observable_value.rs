@@ -1,3 +1,5 @@
+//! An implementation of the Observer pattern.
+
 use std::{
     cell::RefCell,
     rc::Rc,
@@ -14,6 +16,7 @@ pub struct ObservableValue<T>
     new_id: usize,
 }
 
+/// The identifier for a subscription, used to disconnect it when no longer required.
 #[derive(Clone, Copy, Eq, PartialEq)]
 pub struct SubscriptionId(usize);
 
@@ -25,6 +28,7 @@ struct Subscription<T> {
 impl<T> ObservableValue<T>
     where T: Clone
 {
+    /// Construct an `ObservableValue`.
     pub fn new(initial_value: T) -> ObservableValue<T> {
         ObservableValue {
             value: initial_value,
@@ -33,10 +37,12 @@ impl<T> ObservableValue<T>
         }
     }
 
+    /// Get the current value
     pub fn get(&self) -> &T {
         &self.value
     }
 
+    /// Set a new value and notify all connected subscribers.
     pub fn set(&mut self, new_value: &T) {
         self.value = new_value.clone();
         self.call_subscribers();
@@ -48,6 +54,11 @@ impl<T> ObservableValue<T>
         }
     }
 
+    /// Connect a new subscriber that will receive callbacks when the
+    /// value is set.
+    ///
+    /// Returns a SubscriptionId to disconnect the subscription when
+    /// no longer required.
     pub fn connect<F>(&mut self, callback: F) -> SubscriptionId
         where F: (Fn(&T)) + 'static
     {
@@ -62,6 +73,7 @@ impl<T> ObservableValue<T>
         id
     }
 
+    /// Disconnect an existing subscription.
     pub fn disconnect(&mut self, sub_id: SubscriptionId) {
         self.subs.retain(|sub| sub.id != sub_id);
         self.subs.shrink_to_fit();
@@ -82,12 +94,15 @@ impl<T> ObservableValue<T>
     }
 }
 
+/// The read half of an `ObservableValue`, which can only listen for
+/// updates and read the current value.
 pub struct ReadHalf<T>
     where T: Clone
 {
     inner: Rc<RefCell<ObservableValue<T>>>,
 }
 
+/// The write half of an `ObservableValue`, which can write new values.
 pub struct WriteHalf<T>
     where T: Clone
 {
@@ -97,16 +112,23 @@ pub struct WriteHalf<T>
 impl<T> ReadHalf<T>
     where T: Clone
 {
+    /// Get the current value
     pub fn get(&self) -> T {
         self.inner.borrow().get().clone()
     }
 
+    /// Connect a new subscriber that will receive callbacks when the
+    /// value is set.
+    ///
+    /// Returns a SubscriptionId to disconnect the subscription when
+    /// no longer required.
     pub fn connect<F>(&mut self, callback: F) -> SubscriptionId
         where F: (Fn(&T)) + 'static
     {
         self.inner.borrow_mut().connect(callback)
     }
 
+    /// Disconnect an existing subscription.
     pub fn disconnect(&mut self, sub_id: SubscriptionId) {
         self.inner.borrow_mut().disconnect(sub_id)
     }
@@ -115,6 +137,7 @@ impl<T> ReadHalf<T>
 impl<T> WriteHalf<T>
     where T: Clone
 {
+    /// Set a new value and notify all connected subscribers.
     pub fn set(&mut self, new_value: &T) {
         self.inner.borrow_mut().set(new_value)
     }

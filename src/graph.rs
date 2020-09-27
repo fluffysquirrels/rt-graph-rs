@@ -34,16 +34,31 @@ struct State {
 pub struct View {
     /// Zoom level, in units of t per x pixel
     pub zoom_x: f64,
+
+    /// The most recently drawn time value.
     pub last_drawn_t: u32,
+
+    /// The most recently drawn x pixel.
     pub last_drawn_x: u32,
+
+    /// The longest ago time value that is still stored. Note
+    /// that the oldest data is discarded to keep memory usage bounded.
     pub min_t: u32,
+
+    /// The most recent time value.
     pub max_t: u32,
+
+    /// The display mode.
     pub mode: ViewMode,
 }
 
+/// Describes the display mode of the graph
 #[derive(Clone, Debug, Eq, PartialEq)]
 pub enum ViewMode {
+    /// Graph is following the latest data
     Following,
+
+    /// Graph is scrolled to a particular point in time
     Scrolled,
 }
 
@@ -85,9 +100,11 @@ pub struct Config {
     #[builder(default = "1.0")]
     max_zoom_x: f64,
 
+    /// Graph width in pixels
     #[builder(default = "800")]
     graph_width: u32,
 
+    /// Graph height in pixels
     #[builder(default = "200")]
     graph_height: u32,
 
@@ -98,6 +115,7 @@ pub struct Config {
     #[builder(default = "100")]
     windows_to_store: u32,
 
+    /// The style of point to draw
     #[builder(default = "PointStyle::Point")]
     point_style: PointStyle,
 }
@@ -105,11 +123,15 @@ pub struct Config {
 /// The style of point to draw
 #[derive(Clone, Copy, Debug)]
 pub enum PointStyle {
+    /// A point, a single pixel.
     Point,
+
+    /// A cross of 5 pixels in the shape of an 'x'.
     Cross,
 }
 
 impl ConfigBuilder {
+    /// The data source for the graph.
     pub fn data_source<T: DataSource + 'static>(self, ds: T) -> Self {
         self.data_source_internal(RefCell::new(Box::new(ds)))
     }

@@ -3,6 +3,7 @@ use crate::{DataSource, Point, Result};
 const GEN_POINTS: u32 = 200;
 const GEN_T_INTERVAL: u32 = 20;
 
+/// A struct that implements `DataSource` by showing dummy test data.
 #[derive(Debug)]
 pub struct TestDataGenerator {
     curr_t: u32,
@@ -11,6 +12,7 @@ pub struct TestDataGenerator {
 }
 
 impl TestDataGenerator {
+    /// Construct a new instance.
     pub fn new() -> TestDataGenerator {
         TestDataGenerator {
             curr_t: 1,

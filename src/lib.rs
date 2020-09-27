@@ -1,4 +1,11 @@
 #![deny(warnings)]
+#![deny(missing_docs)]
+
+//! A real-time graphing experiment.
+//!
+//! rt-graph uses GTK (via the gtk-rs Rust bindings) for its UI and is
+//! designed to be embedded into any gtk::Container in your
+//! application.
 
 #[macro_use]
 extern crate derive_builder;
@@ -28,6 +35,7 @@ pub use test_data_generator::TestDataGenerator;
 /// Represents an error that could occur using the crate
 #[derive(Debug)]
 pub enum Error {
+    /// An error described by a `String`.
     String(String),
 }
 

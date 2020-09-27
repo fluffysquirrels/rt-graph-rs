@@ -15,10 +15,12 @@ struct Subscription<T> {
     callback: Box<dyn Fn(T)>,
 }
 
+/// The identifier for a subscription, used to disconnect it when no longer required.
 #[derive(Clone, Copy, Eq, PartialEq)]
 pub struct SubscriptionId(usize);
 
 impl<T: Clone> Signal<T> {
+    /// Construct a new `Signal`.
     pub fn new() -> Signal<T> {
         Signal {
             subs: Vec::with_capacity(0),
@@ -26,6 +28,11 @@ impl<T: Clone> Signal<T> {
         }
     }
 
+    /// Connect a new subscriber that will receive callbacks when the
+    /// signal is raised.
+    ///
+    /// Returns a SubscriptionId to disconnect the subscription when
+    /// no longer required.
     pub fn connect<F>(&mut self, callback: F) -> SubscriptionId
         where F: (Fn(T)) + 'static
     {
@@ -41,12 +48,14 @@ impl<T: Clone> Signal<T> {
         id
     }
 
+    /// Notify existing subscribers.
     pub fn raise(&self, value: T) {
         for sub in self.subs.iter() {
             (sub.callback)(value.clone())
         }
     }
 
+    /// Disconnect an existing subscription.
     pub fn disconnect(&mut self, id: SubscriptionId) {
         self.subs.retain(|sub| sub.id != id);
         self.subs.shrink_to_fit();

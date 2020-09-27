@@ -70,7 +70,7 @@ gtk-rs (Rust GTK bindings) documentation: <https://gtk-rs.org/docs-src/>
 
 * Flip y axis so increasing values are higher on the screen.
 * Make `Store` private.
-* Add more per-item documentation.
+* Add per-item documentation for all public items.
 
 ### 0.2.0
 
