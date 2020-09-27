@@ -501,14 +501,10 @@ fn render_patch_to_bytes(
                 // Skip points that are outside our render patch.
                 continue;
             }
+            // Mirror the y-axis
+            let y = pbh - y;
 
             point_func(x, y, pbw, pbh, pb, col);
-
-            let i = BYTES_PER_PIXEL * (pbw * y + x);
-            pb[i+0] = col.0; // R
-            pb[i+1] = col.1; // G
-            pb[i+2] = col.2; // B
-            pb[i+3] = 255;   // A
         }
     }
 
