@@ -66,14 +66,15 @@ gtk-rs (Rust GTK bindings) documentation: <https://gtk-rs.org/docs-src/>
 
 ## Changelog
 
-### UNRELEASED
+### 0.3.0 (UNRELEASED)
 
-Flip y axis so increasing values are higher on the screen.
+* Flip y axis so increasing values are higher on the screen.
+* Make `Store` private.
 
 ### 0.2.0
 
-Refactor out Graph, GraphWithControls, so consumers can write their own controls.
+* Refactor out Graph, GraphWithControls, so consumers can write their own controls.
 
 ### 0.1.1
 
-Add more content to the README, including a screenshot.
+* Add more content to the README, including a screenshot.

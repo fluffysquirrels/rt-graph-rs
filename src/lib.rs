@@ -20,7 +20,7 @@ mod signal;
 pub use signal::Signal;
 
 mod store;
-pub use store::Store;
+use store::Store;
 
 mod test_data_generator;
 pub use test_data_generator::TestDataGenerator;
