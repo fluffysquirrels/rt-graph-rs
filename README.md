@@ -66,6 +66,11 @@ gtk-rs (Rust GTK bindings) documentation: <https://gtk-rs.org/docs-src/>
 
 ## Changelog
 
+### 0.3.1
+
+* Fix panic when clicking on a graph with no data points.
+* Add NullDataSource.
+
 ### 0.3.0
 
 * Flip y axis so increasing values are higher on the screen.
