@@ -330,14 +330,14 @@ impl Graph {
                  ((x - (view.last_drawn_x as f64)) * view.zoom_x) as i64)
             .max(0).min(view.last_drawn_t as i64)
             as u32;
-        let pt = self.s.store.borrow().query_point(t).unwrap();
+        let pt = self.s.store.borrow().query_point(t).unwrap()?;
 
         // If we are getting a point >= 10 pixels away, return None instead.
         // This can happen when old data has been discarded but is still on screen.
-        let pt: Option<Point> = if (pt.as_ref().unwrap().t - t) >= (view.zoom_x * 10.0) as u32 {
+        let pt: Option<Point> = if (pt.t - t) >= (view.zoom_x * 10.0) as u32 {
             None
         } else {
-            pt
+            Some(pt)
         };
 
         pt
