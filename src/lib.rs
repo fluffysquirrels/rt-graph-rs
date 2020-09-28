@@ -21,6 +21,9 @@ pub use graph::{Config, ConfigBuilder, Graph, PointStyle, View, ViewMode};
 mod graph_with_controls;
 pub use graph_with_controls::GraphWithControls;
 
+mod null_data_source;
+pub use null_data_source::NullDataSource;
+
 pub mod observable_value;
 
 mod signal;
