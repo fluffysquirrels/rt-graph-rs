@@ -399,7 +399,7 @@ fn redraw_graph(s: &State) {
                      x /* x */, 0 /* y */,
                      t0, t1,
                      0 /* v0 */, std::u16::MAX /* v1 */,
-                     point_func_select(s.config.point_style));
+                     s.config.point_style);
         view.last_drawn_x = (x + patch_dims.0) as u32;
         view.last_drawn_t = t1;
         s.view_write.borrow_mut().set(&view);
@@ -475,7 +475,7 @@ fn tick(s: &State) {
                          patch_offset_x as usize, 0 /* y */,
                          view.last_drawn_t, new_t,
                          0 /* v0 */, std::u16::MAX /* v1 */,
-                         point_func_select(s.config.point_style));
+                         s.config.point_style);
 
             view.last_drawn_t = new_t;
             view.last_drawn_x = (patch_offset_x + patch_dims.0 as u32).min(s.config.graph_width);
@@ -493,7 +493,7 @@ fn render_patch(
     pw: usize, ph: usize,
     x: usize, y: usize,
     t0: Time, t1: Time, v0: Value, v1: Value,
-    point_func: &dyn Fn(usize, usize, usize, usize, &mut [u8], Color),
+    point_style: PointStyle,
 ) {
     trace!("render_patch: pw={}, ph={} x={} y={}", pw, ph, x, y);
     let mut patch_bytes = vec![0u8; pw * ph * BYTES_PER_PIXEL];
@@ -501,7 +501,8 @@ fn render_patch(
                           pw, ph,
                           t0, t1,
                           v0, v1,
-                          point_func).unwrap();
+                          point_func_select(point_style)
+                          ).unwrap();
     copy_patch(surface, patch_bytes,
                pw, ph,
                x, y);
