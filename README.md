@@ -66,6 +66,10 @@ gtk-rs (Rust GTK bindings) documentation: <https://gtk-rs.org/docs-src/>
 
 ## Changelog
 
+### 0.3.2
+
+* Add `.show` and `.hide` methods to `GraphWithControls`.
+
 ### 0.3.1
 
 * Fix panic when clicking on a graph with no data points.
