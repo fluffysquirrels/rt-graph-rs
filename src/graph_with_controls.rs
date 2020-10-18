@@ -47,7 +47,7 @@ impl GraphWithControls {
 
         let buttons_box = gtk::BoxBuilder::new()
             .orientation(gtk::Orientation::Horizontal)
-            .height_request(50)
+            .height_request(35)
             .build();
         controls_box.add(&buttons_box);
 
@@ -134,6 +134,16 @@ impl GraphWithControls {
         GraphWithControls {
             s: self.s.clone()
         }
+    }
+
+    /// Show the graph and controls.
+    pub fn show(&self) {
+        self.s.controls_box.show();
+    }
+
+    /// Hide the graph and controls.
+    pub fn hide(&self) {
+        self.s.controls_box.hide();
     }
 }
 
