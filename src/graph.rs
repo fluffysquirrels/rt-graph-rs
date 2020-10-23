@@ -540,11 +540,17 @@ fn point_func_cross(x: usize, y: usize, pbw: usize, pbh: usize, pb: &mut [u8], c
         }
     };
 
-    pixel(x-1, y-1);
-    pixel(x+1, y-1);
-    pixel(x  , y  );
-    pixel(x-1, y+1);
     pixel(x+1, y+1);
+    if y >= 1 {
+        pixel(x+1, y-1);
+    }
+    pixel(x  , y  );
+    if x >= 1 {
+        if y >= 1 {
+            pixel(x-1, y-1);
+        }
+        pixel(x-1, y+1);
+    }
 }
 
 fn render_patch_to_bytes(
