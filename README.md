@@ -66,6 +66,12 @@ gtk-rs (Rust GTK bindings) documentation: <https://gtk-rs.org/docs-src/>
 
 ## Changelog
 
+### 0.3.3
+
+* Add `.show` and `.hide` methods to `Graph`.
+* A hidden `Graph` ticks less frequently (1Hz), reducing CPU usage dramatically.
+* `Graph::tick()` does less when no data is ingested from a DataSource.
+
 ### 0.3.2
 
 * Add `.show` and `.hide` methods to `GraphWithControls`.
