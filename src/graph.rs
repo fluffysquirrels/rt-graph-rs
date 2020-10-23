@@ -409,81 +409,85 @@ fn redraw_graph(s: &State) {
 
 fn tick(s: &State) {
     trace!("tick");
-
     // Ingest new data
     let new_data = s.config.data_source.borrow_mut().get_data().unwrap();
-    s.store.borrow_mut().ingest(&*new_data).unwrap();
 
-    let t_latest = s.store.borrow().last_t();
 
-    // Discard old data if there is any
-    let window_base_dt = (s.config.graph_width as f64 * s.config.base_zoom_x) as u32;
-    let keep_window = s.config.windows_to_store * window_base_dt;
-    let discard_start = if t_latest >= keep_window { t_latest - keep_window } else { 0 };
-    if discard_start > 0 {
-        s.store.borrow_mut().discard(0, discard_start).unwrap();
-    }
+    if new_data.len() > 0 {
+        s.store.borrow_mut().ingest(&*new_data).unwrap();
+        let t_latest = s.store.borrow().last_t();
 
-    let mut view = s.view_read.borrow().get();
-    view.min_t = s.store.borrow().first_t();
-    view.max_t = t_latest;
-    s.view_write.borrow_mut().set(&view);
-
-    if new_data.len() > 0 && (view.mode == ViewMode::Following ||
-                              (view.mode == ViewMode::Scrolled &&
-                               view.last_drawn_x < s.config.graph_width)) {
-        // Draw the new data.
-
-        // Calculate the size of the latest patch to render.
-        // TODO: Handle when patch_dims.0 >= s.config.graph_width.
-        // TODO: Handle scrolled when new data is offscreen (don't draw)
-        let patch_dims =
-            ((((t_latest - view.last_drawn_t) as f64 / view.zoom_x)
-               .floor() as usize)
-               .min(s.config.graph_width as usize),
-             s.config.graph_height as usize);
-        // If there is more than a pixel's worth of data to render since we last drew,
-        // then draw it.
-        if patch_dims.0 > 0 {
-            let new_t = view.last_drawn_t + (patch_dims.0 as f64 * view.zoom_x) as u32;
-
-            let patch_offset_x = match view.mode {
-                ViewMode::Following => s.config.graph_width - (patch_dims.0 as u32),
-                ViewMode::Scrolled => view.last_drawn_x,
-            };
-
-            if view.mode == ViewMode::Following {
-                // Copy existing graph to the temp surface, offsetting it to the left.
-                let c = cairo::Context::new(&*s.temp_surface.borrow());
-                c.set_source_surface(&*s.backing_surface.borrow(),
-                                     -(patch_dims.0 as f64) /* x offset*/, 0.0 /* y offset */);
-                c.rectangle(0.0, // x offset
-                            0.0, // y offset
-                            patch_offset_x as f64, // width
-                            s.config.graph_height as f64); // height
-                c.fill();
-
-                // Present new graph by swapping the surfaces.
-                s.backing_surface.swap(&s.temp_surface);
-            }
-
-            let cols = s.config.data_source.borrow().get_colors().unwrap();
-            render_patch(&s.backing_surface.borrow(),
-                         &s.store.borrow(),
-                         &cols,
-                         patch_dims.0 /* w */, patch_dims.1 /* h */,
-                         patch_offset_x as usize, 0 /* y */,
-                         view.last_drawn_t, new_t,
-                         0 /* v0 */, std::u16::MAX /* v1 */,
-                         s.config.point_style);
-
-            view.last_drawn_t = new_t;
-            view.last_drawn_x = (patch_offset_x + patch_dims.0 as u32).min(s.config.graph_width);
-            s.view_write.borrow_mut().set(&view);
+        // Discard old data if there is any
+        let window_base_dt = (s.config.graph_width as f64 * s.config.base_zoom_x) as u32;
+        let keep_window = s.config.windows_to_store * window_base_dt;
+        let discard_start = if t_latest >= keep_window { t_latest - keep_window } else { 0 };
+        if discard_start > 0 {
+            s.store.borrow_mut().discard(0, discard_start).unwrap();
         }
 
-        // Invalidate the graph widget so we get a draw request.
-        s.drawing_area.queue_draw();
+        let mut view = s.view_read.borrow().get();
+
+        view.min_t = s.store.borrow().first_t();
+        view.max_t = t_latest;
+        s.view_write.borrow_mut().set(&view);
+
+        if view.mode == ViewMode::Following ||
+            (view.mode == ViewMode::Scrolled && view.last_drawn_x < s.config.graph_width) {
+
+            // Draw the new data.
+
+            // Calculate the size of the latest patch to render.
+            // TODO: Handle when patch_dims.0 >= s.config.graph_width.
+            // TODO: Handle scrolled when new data is offscreen (don't draw)
+            let patch_dims =
+                ((((t_latest - view.last_drawn_t) as f64 / view.zoom_x)
+                  .floor() as usize)
+                 .min(s.config.graph_width as usize),
+                 s.config.graph_height as usize);
+            // If there is more than a pixel's worth of data to render since we last drew,
+            // then draw it.
+            if patch_dims.0 > 0 {
+                let new_t = view.last_drawn_t + (patch_dims.0 as f64 * view.zoom_x) as u32;
+
+                let patch_offset_x = match view.mode {
+                    ViewMode::Following => s.config.graph_width - (patch_dims.0 as u32),
+                    ViewMode::Scrolled => view.last_drawn_x,
+                };
+
+                if view.mode == ViewMode::Following {
+                    // Copy existing graph to the temp surface, offsetting it to the left.
+                    let c = cairo::Context::new(&*s.temp_surface.borrow());
+                    c.set_source_surface(&*s.backing_surface.borrow(),
+                                         -(patch_dims.0 as f64) /* x offset*/, 0.0 /* y offset */);
+                    c.rectangle(0.0, // x offset
+                                0.0, // y offset
+                                patch_offset_x as f64, // width
+                                s.config.graph_height as f64); // height
+                    c.fill();
+
+                    // Present new graph by swapping the surfaces.
+                    s.backing_surface.swap(&s.temp_surface);
+                }
+
+                let cols = s.config.data_source.borrow().get_colors().unwrap();
+                render_patch(&s.backing_surface.borrow(),
+                             &s.store.borrow(),
+                             &cols,
+                             patch_dims.0 /* w */, patch_dims.1 /* h */,
+                             patch_offset_x as usize, 0 /* y */,
+                             view.last_drawn_t, new_t,
+                             0 /* v0 */, std::u16::MAX /* v1 */,
+                             s.config.point_style);
+
+                view.last_drawn_t = new_t;
+                view.last_drawn_x = (patch_offset_x + patch_dims.0 as u32)
+                                    .min(s.config.graph_width);
+                s.view_write.borrow_mut().set(&view);
+            }
+
+            // Invalidate the graph widget so we get a draw request.
+            s.drawing_area.queue_draw();
+        }
     }
 }
 
