@@ -139,11 +139,13 @@ impl GraphWithControls {
     /// Show the graph and controls.
     pub fn show(&self) {
         self.s.controls_box.show();
+        self.s.graph.borrow().show();
     }
 
     /// Hide the graph and controls.
     pub fn hide(&self) {
         self.s.controls_box.hide();
+        self.s.graph.borrow().hide();
     }
 }
 

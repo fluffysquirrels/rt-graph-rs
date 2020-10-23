@@ -27,6 +27,14 @@ struct State {
     fps_timer: Cell<Instant>,
 
     config: Config,
+
+    tick_id: RefCell<TickId>,
+}
+
+enum TickId {
+    IngestOnly(glib::source::SourceId),
+    EveryFrame(gtk::TickCallbackId),
+    None,
 }
 
 /// Describes what is currently showing on the graph.
@@ -183,6 +191,8 @@ impl Graph {
             fps_timer: Cell::new(Instant::now()),
 
             config,
+
+            tick_id: RefCell::new(TickId::None),
         });
         let graph = Graph {
             s: s.clone(),
@@ -194,17 +204,71 @@ impl Graph {
             graph_draw(ctrl, ctx, &*sc)
         });
 
-        // Register our tick timer.
-        let sc = s.clone();
-        let _tick_id = drawing_area.add_tick_callback(move |_ctrl, _clock| {
-            tick(&*sc);
-            Continue(true)
-        });
+        graph.set_frame_tick();
 
         // Show everything recursively
         drawing_area.show_all();
 
         graph
+    }
+
+    fn set_frame_tick(&self) {
+        // Take the old value.
+        let old_tick_id = self.s.tick_id.replace(TickId::None);
+        match old_tick_id {
+            TickId::IngestOnly(id) => {
+                glib::source::source_remove(id);
+            },
+            TickId::EveryFrame(id) => {
+                // Already as desired, put old value back.
+                self.s.tick_id.replace(TickId::EveryFrame(id));
+                return;
+            },
+            TickId::None => (),
+        }
+
+        let sc = self.s.clone();
+        let frame_tick_id = self.s.drawing_area.add_tick_callback(move |_ctrl, _clock| {
+            tick(&*sc);
+            Continue(true)
+        });
+        *self.s.tick_id.borrow_mut() = TickId::EveryFrame(frame_tick_id);
+    }
+
+    fn set_ingest_tick(&self) {
+        // Take the old value.
+        let old_tick_id = self.s.tick_id.replace(TickId::None);
+        match old_tick_id {
+            TickId::EveryFrame(id) => {
+                id.remove();
+            },
+            TickId::IngestOnly(id) => {
+                // Already as desired, put old value back.
+                self.s.tick_id.replace(TickId::IngestOnly(id));
+                return;
+            }
+            TickId::None => (),
+        }
+
+        let sc = self.s.clone();
+        let ingest_tick_id =
+            glib::source::timeout_add_seconds_local(
+                1 /* seconds */,
+                move || {
+                    tick(&*sc);
+                    Continue(true)
+                });
+        *self.s.tick_id.borrow_mut() = TickId::IngestOnly(ingest_tick_id);
+    }
+
+    /// Show the graph.
+    pub fn show(&self) {
+        self.set_frame_tick();
+    }
+
+    /// Hide the graph.
+    pub fn hide(&self) {
+        self.set_ingest_tick();
     }
 
     /// Return the width of the graph
