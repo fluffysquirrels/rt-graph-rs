@@ -264,11 +264,13 @@ impl Graph {
     /// Show the graph.
     pub fn show(&self) {
         self.set_frame_tick();
+        self.s.drawing_area.show();
     }
 
     /// Hide the graph.
     pub fn hide(&self) {
         self.set_ingest_tick();
+        self.s.drawing_area.hide();
     }
 
     /// Return the width of the graph
