@@ -66,6 +66,10 @@ gtk-rs (Rust GTK bindings) documentation: <https://gtk-rs.org/docs-src/>
 
 ## Changelog
 
+### 0.3.4
+
+* Swap B and R color channels, they were backwards.
+
 ### 0.3.3
 
 * Add `.show` and `.hide` methods to `Graph`.

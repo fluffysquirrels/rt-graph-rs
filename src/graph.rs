@@ -588,9 +588,9 @@ fn point_func_select(s: PointStyle) -> &'static dyn Fn(usize, usize, usize, usiz
 fn point_func_point(x: usize, y: usize, pbw: usize, pbh: usize, pb: &mut [u8], col: Color) {
     if x < pbw && y < pbh {
         let i = BYTES_PER_PIXEL * (pbw * y + x);
-        pb[i+0] = col.0; // R
+        pb[i+2] = col.0; // R
         pb[i+1] = col.1; // G
-        pb[i+2] = col.2; // B
+        pb[i+0] = col.2; // B
         pb[i+3] = 255;   // A
     }
 }
@@ -599,9 +599,9 @@ fn point_func_cross(x: usize, y: usize, pbw: usize, pbh: usize, pb: &mut [u8], c
     let mut pixel = |px: usize, py: usize| {
         if px < pbw && py < pbh {
             let i = BYTES_PER_PIXEL * (pbw * py + px);
-            pb[i+0] = col.0; // R
+            pb[i+2] = col.0; // R
             pb[i+1] = col.1; // G
-            pb[i+2] = col.2; // B
+            pb[i+0] = col.2; // B
             pb[i+3] = 255;   // A
         }
     };
